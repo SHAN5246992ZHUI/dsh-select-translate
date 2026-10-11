@@ -1,0 +1,5 @@
+# dsh-select-translate bundle patch —— 把划词翻译挂进 profile 组合。
+- insert:
+    - id: dsh-select-translate
+      # Node 可解析的包名——必须与 package.json 的 name 一致。
+      name: dsh-select-translate

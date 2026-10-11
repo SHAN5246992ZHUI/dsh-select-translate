@@ -1,0 +1,13 @@
+# 依赖与包管理器产物（本插件零依赖，这些不该进仓库）
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# 本机开发时的 profile patch 备份（只对当前这台机器有意义）
+*.profile-backup
+
+# 编辑器 / 系统垃圾
+.DS_Store
+Thumbs.db
+*.log

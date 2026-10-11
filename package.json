@@ -1,0 +1,58 @@
+{
+  "name": "dsh-select-translate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "划词翻译 · 选中文字即在鼠标旁弹出只含译文的卡片",
+  "license": "MIT",
+  "author": "SHAN5246992ZHUI",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SHAN5246992ZHUI/dsh-select-translate.git"
+  },
+  "homepage": "https://github.com/SHAN5246992ZHUI/dsh-select-translate#readme",
+  "bugs": {
+    "url": "https://github.com/SHAN5246992ZHUI/dsh-select-translate/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-bundle",
+    "deepseek-harness",
+    "translate",
+    "selection",
+    "text-selection",
+    "overlay",
+    "windows",
+    "划词",
+    "翻译"
+  ],
+  "files": [
+    "index.js",
+    "settings.mjs",
+    "client.js",
+    "companion",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web" }
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "meta": {
+    "title": "划词翻译",
+    "description": "在任意 Windows 应用里划词，鼠标旁弹出只含译文的置顶卡片；译文流式出现并跟随最新一行，单次上限 15000 字。"
+  }
+}
