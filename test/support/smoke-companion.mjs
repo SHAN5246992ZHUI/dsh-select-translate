@@ -256,9 +256,25 @@ if (!quiet) console.log('  ⚠ 检测到你正在使用插件（有真实划词 
 if (quiet) {
 if (process.argv.includes('--long')) {
   console.log('\n长文本 4000 字（--long；会真花一次模型调用）')
-  const sentence =
-    'The scheduler multiplexes thousands of goroutines onto a small number of operating system threads, and the runtime decides when a blocked goroutine should yield its thread. '
-  const text = sentence.repeat(Math.ceil(4000 / sentence.length)).slice(0, 4000)
+  // ⚠️ 长文本必须**真实多样**，不能"同一句重复 80 遍"：重复输入会让模型自己也复读，
+  // 输出无限膨胀撞上 maxTokens 上限 → `finish: max-tokens`，于是「没被截断」那条检查会**假失败**
+  // （实测：同句重复的 4000 字输入产出 6400 字译文被截断；换成下面这种多样文本就稳定 `stop`）。
+  const paragraphs = [
+    'The scheduler multiplexes thousands of goroutines onto a small number of operating system threads, and the runtime decides when a blocked goroutine should yield its thread.',
+    'A load balancer keeps the number of in-flight requests bounded by admitting work only when a slot is free, which prevents a slow backend from exhausting connection memory.',
+    'The storage engine writes every mutation to an append-only log before updating the in-memory index, so a crash can be recovered by replaying the tail of the log.',
+    'Caches are useful only when invalidation is correct, and the cheapest way to stay correct is to make every cached value immutable and versioned.',
+    'A worker pool grows while tasks are queued and shrinks when the queue drains, but shrinking too eagerly wastes the warm state that made the pool fast in the first place.',
+    'Timeouts are not error handling; they are a statement about how long the caller is willing to wait before it gives up and releases the resources it is holding.',
+    'Observability without sampling is affordable only when the hot path is cheap, which is why most systems record counters eagerly and traces selectively.',
+    'Backpressure is the difference between a system that degrades and a system that falls over: refusing work early is a feature, not a failure.',
+    'The compiler inlines small functions to remove call overhead, then the profiler shows that the remaining cost is memory traffic rather than instructions.',
+    'A lock protects a data structure, not an intention, so the same mutex held for a longer section quietly serialises work that looked parallel on paper.',
+    'Retries amplify load exactly when the system is least able to absorb it, so retry policies need jitter, a budget, and a clear owner.',
+    'Schema changes are safe when they are additive first: deploy code that tolerates both shapes, migrate the data, then remove the old path in a later release.',
+  ]
+  const rotated = [...paragraphs.slice(5), ...paragraphs.slice(0, 5)] // 换一段起点，避免每次都一模一样
+  const text = rotated.join(' ').repeat(3).slice(0, 4000)
   await togglePin() // 取消钉住，让卡片能换位
   const started = Date.now()
 
