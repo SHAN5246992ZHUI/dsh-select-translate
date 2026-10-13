@@ -1,7 +1,6 @@
 {
   "name": "dsh-select-translate",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "划词翻译 · 选中文字即在鼠标旁弹出只含译文的卡片",
   "license": "MIT",
