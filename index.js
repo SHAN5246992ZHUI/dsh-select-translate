@@ -475,7 +475,9 @@ export async function handleTranslate(ctx, req, res) {
       timing: { totalMs: Date.now() - startedAt, firstTokenMs: firstDeltaAt === 0 ? null : firstDeltaAt - startedAt },
     })
   } catch (error) {
-    ctx.logger?.warn?.('dsh-select-translate: translate failed', error)
+    // 只记 message，不把 error 对象整个交给宿主日志：适配器可能把请求体塞进 error，
+    // 那样原文就会进 DSH 日志，与 README 的「不落盘」承诺自相矛盾（交接文档 §5.2 P3-16）。
+    ctx.logger?.warn?.('dsh-select-translate: translate failed', error instanceof Error ? error.message : String(error))
     sink.send({ type: 'error', requestId: args.requestId, message: error instanceof Error ? error.message : String(error) })
   } finally {
     res.end()

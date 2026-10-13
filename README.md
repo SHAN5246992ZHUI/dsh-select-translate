@@ -17,6 +17,7 @@
 | 宿主 | DSH 桌面端（实测 `@deepseek-ai/dsh-desktop` 0.2.0-rc.2）。纯 Web 端没有原生窗口，弹不出卡片 |
 | 依赖 | **零额外依赖、零构建**：koffi 复用 DSH 自带的（不装原生模块、**不需要授权构建脚本**）；插件是纯 JS，没有 `build`/`prepare` 脚本 |
 | 权限 | 需要读任意应用的选区与全局鼠标（UIA + 40ms 轮询），并在本机 `127.0.0.1` 上开一个内部 HTTP 口给伴生进程用 |
+| 已知限制 | **以管理员权限运行的应用取不到词**：Windows 的 UIPI 不允许低权限进程读取高权限窗口的 UI Automation，这类窗口里划词**不会弹卡片** —— 属预期行为，不是故障（取词达标线也不含 WPS / Office） |
 
 ## 隐私
 
@@ -42,8 +43,13 @@
 ```sh
 # 推荐：在 DSH 里「设置 → 插件市场」搜「划词翻译」，一键安装
 # 或用命令行（等价于市场做的事）：
-dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
+dsh plugin --profile web add dsh-select-translate                         # 走 npm（已发布）
+dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate  # 走 GitHub 源码
 ```
+
+包同时发布在 npm：[`dsh-select-translate`](https://www.npmjs.com/package/dsh-select-translate)（MIT、**零依赖、零构建**）。
+市场的安装优先级是 **npm 包 → Release tarball → 整仓源码**，所以有 npm 版本时它优先走 npm ——
+预构建安装可以跳过 `allowBuilds` 构建授权那一步。
 
 装完**重启 DSH**（宿主半边不会热加载）。卸载：市场里点卸载，或 `dsh plugin remove dsh-select-translate`。
 
