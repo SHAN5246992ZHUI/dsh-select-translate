@@ -29,7 +29,6 @@ import {
   cardLayout,
   clampScroll,
   langRowAt,
-  normalizeLineBreaks,
   paintCard,
   paintTriggerIcon,
   triggerIconHit,
@@ -39,6 +38,7 @@ import {
   CARD,
 } from './card.mjs'
 import { createContextReader } from './context.mjs'
+import { prepareSourceText } from './text.mjs'
 import { createGestureDetector } from './gesture.mjs'
 import { hitZone } from './hitzone.mjs'
 import { createEdgeDetector, pointInCardRect } from './input.mjs'
@@ -532,9 +532,12 @@ const translator = createTranslator({
 })
 
 async function startTranslate(text, target) {
-  // 行分隔符归一化：UIA 常给 `\r`，而提示词与原生排版都只认 `\n`（交接文档 §6 第 23 条）。
-  // 放在这个入口，手势 / 小图标 / /simulate 三条路都覆盖到。
-  const source = normalizeLineBreaks(text)
+  // 取词文本整理（交接文档 §6 第 23 条）：
+  // ① `\r\n`/`\r` → `\n`（UIA 的行分隔符不是 `\n`，而提示词与原生排版都只认 `\n`）；
+  // ② PDF 这类提供方会把整段压成一行、连空格都丢 —— 这时按行内编号/分条标记**确定性**插回换行
+  //    （`prepareSourceText` 的 `restoreListBreaks`，只在完全没有换行时才动手）。
+  // 放在这个入口，手势 / 小图标 / /simulate 三条路都覆盖到；函数是幂等的。
+  const source = prepareSourceText(text)
   if (source.trim() === '') return
   const requestId = card.requestId + 1
   let finish = null
@@ -623,7 +626,7 @@ async function handleGesture(gesture) {
     noteError('probe', error)
   }
 
-  const selection = typeof probe?.selection === 'string' ? normalizeLineBreaks(probe.selection).trim() : ''
+  const selection = typeof probe?.selection === 'string' ? prepareSourceText(probe.selection).trim() : ''
   state.lastProbe = {
     at: Date.now(),
     gesture: { kind: gesture.kind, x: gesture.x, y: gesture.y },

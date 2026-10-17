@@ -16,6 +16,8 @@
  * 所有尺寸都用 DIP 写，绘制时统一乘 `s`（显示器缩放）→ painter 收物理像素。
  */
 
+import { normalizeLineBreaks } from './text.mjs'
+
 export const CARD = {
   width: 380, // 卡片本宽（不含阴影外扩）
   radius: 12,
@@ -382,15 +384,6 @@ function paintShadow(painter, rect, radius, s) {
 }
 
 /* ────────────────────────── 绘制 ────────────────────────── */
-
-/**
- * 行分隔符归一化：**UIA 的选区文本常用 `\r`（或 `\r\n`）换行，而排版只把 `\n` 当硬换行** ——
- * `\r` 会被当成普通字符画进同一行，于是"原文分了段、译文却挤成一段"（交接文档 §6 第 23 条）。
- * 统一成 `\n`。导出是为了让单测直接钉住它。
- */
-export function normalizeLineBreaks(text) {
-  return String(text ?? '').replace(/\r\n?/g, '\n')
-}
 
 /**
  * 画一整张卡片。

@@ -10,7 +10,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { CARD, cardHitTest, cardLayout, clampScroll, LANG_IDS, LANG_LABELS, langRowAt, normalizeLineBreaks, paintCard } from '../companion/card.mjs'
+import { CARD, cardHitTest, cardLayout, clampScroll, LANG_IDS, LANG_LABELS, langRowAt, paintCard } from '../companion/card.mjs'
+import { normalizeLineBreaks } from '../companion/text.mjs'
 import { createFakePainter } from './support/fake-painter.mjs'
 
 /** paintCard 需要的状态（缺省值就是"刚出译文、没悬停、没下拉"）。 */
