@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { handleTranslate, maxTokensFor, modelLimits, pickEffort, SYSTEM_PROMPT, targetLabel } from '../index.js'
+import { detectTargetLanguage, handleTranslate, maxTokensFor, modelLimits, pickEffort, SYSTEM_PROMPT, targetLabel } from '../index.js'
 
 /* ────────────────────────── 假 req / res / ctx ────────────────────────── */
 
@@ -146,6 +146,29 @@ test('SYSTEM_PROMPT 是缓存前缀：内容被钉死（改标点就要同步改
       '5. 用该领域通行的译法；拿不准时保留原文。',
     ].join('\n'),
   )
+})
+
+/* ────────────────────────── auto 目标语言 ────────────────────────── */
+
+test('auto 目标语言按"谁占主导"判，不是"见到一个汉字就当中文"', () => {
+  // 没有汉字 → 译成中文
+  assert.equal(detectTargetLanguage('Hello world'), 'zh')
+  assert.equal(detectTargetLanguage('12345 !!!'), 'zh')
+  // 纯中文 → 译成英文
+  assert.equal(detectTargetLanguage('这是中文'), 'en')
+  // ★ 踩过的 bug：开头一句中文 + 后面一大段英文，旧实现（CJK.test）会判成中文 → 输出英文
+  assert.equal(
+    detectTargetLanguage('题目：For the two-ray model, find the delay spread between the two signals.'),
+    'zh',
+  )
+  // 中文正文里夹几个英文术语，仍算中文主导
+  assert.equal(detectTargetLanguage('使用 ctx.llm.stream 调用模型'), 'en')
+
+  // 显式指定不受影响
+  assert.equal(targetLabel('zh', 'Hello'), '中文（简体）')
+  assert.equal(targetLabel('en', '这是中文'), 'English')
+  assert.equal(targetLabel('auto', 'Hello world'), '中文（简体）')
+  assert.equal(targetLabel('auto', '这是中文'), 'English')
 })
 
 /* ────────────────────────── handleTranslate ────────────────────────── */

@@ -19,7 +19,9 @@
 import { normalizeLineBreaks } from './text.mjs'
 
 export const CARD = {
-  width: 380, // 卡片本宽（不含阴影外扩）
+  width: 380, // 卡片本宽（不含阴影外扩）—— 用户拖两侧后由 `m.cardW` / 窗口实际宽度覆盖
+  minWidth: 300, // 拖窄的下限（再窄正文一行放不下几个字）
+  maxWidth: 900, // 拖宽的上限（再宽只是把行拉长，反而难读）
   radius: 12,
   headerH: 44,
   footerH: 40,
@@ -206,7 +208,8 @@ export function cardLayout(bodyHeight, m = {}) {
   // 卡片最小高度 = 44 + (25+30) + 40 = 139，而下拉最低点 = 40 + 98 = 138，
   // 所以最小卡片本来就容得下菜单，展开时不需要长高（也就不会跳）。
   const bodyH = Math.max(CARD.bodyLine, bodyHeight) + CARD.padY * 2
-  const cardW = CARD.width
+  // 卡片宽度：默认 380，用户拖两侧后由 `m.cardW` 传入（夹在 [minWidth, maxWidth]）
+  const cardW = Math.max(CARD.minWidth, Math.min(CARD.maxWidth, Math.round(m.cardW ?? CARD.width)))
   const cardH = CARD.headerH + bodyH + CARD.footerH
   const left = CARD.shadow
   const top = CARD.shadow
@@ -404,8 +407,11 @@ export function paintCard(painter, width, height, data, s) {
   const bodySize = text === '' ? 14 * s : CARD.bodyFont * s
   const bodyLine = text === '' ? 25 * s : CARD.bodyLine * s
 
+  // 卡片宽度按**窗口实际宽度**反推：用户拖两侧改宽后正文要跟着重排（交接文档 §6 第 24 条）。
+  const cardW = Math.max(CARD.minWidth, Math.min(CARD.maxWidth, Math.round(width / s) - CARD.shadow * 2))
+
   // 先量：正文该多高，窗口就该多高
-  const probeWidth = (CARD.width - CARD.padX * 2) * s
+  const probeWidth = (cardW - CARD.padX * 2) * s
   const measured = shown === ''
     ? bodyLine
     : painter.paragraph(shown, 0, 0, probeWidth, { size: bodySize, lineHeight: bodyLine, maxHeight: Infinity, dryRun: true })
@@ -439,7 +445,7 @@ export function paintCard(painter, width, height, data, s) {
   const copyW = footerW(copyTextW)
   const retryW = footerW(retryTextW)
 
-  const layout = cardLayout(bodyHeight, { langOpen: data.langOpen, langW, copyW, retryW })
+  const layout = cardLayout(bodyHeight, { cardW, langOpen: data.langOpen, langW, copyW, retryW })
   const hover = data.hover ?? null
   const icon = CARD.iconSize * s
   const card = { x: layout.card.x * s, y: layout.card.y * s, w: layout.card.w * s, h: layout.card.h * s }
@@ -591,5 +597,5 @@ export function paintCard(painter, width, height, data, s) {
     }
   }
 
-  return { bodyHeight, contentHeight, scroll, langW, copyW, retryW }
+  return { bodyHeight, contentHeight, scroll, langW, copyW, retryW, cardW }
 }

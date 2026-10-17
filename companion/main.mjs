@@ -160,6 +160,10 @@ const card = {
   hover: null,
   copied: false,
   bodyHeight: CARD.bodyLine,
+  /** 卡片本宽（DIP）。用户拖两侧改宽后由窗口的 WM_SIZE 回写（见 onResized），跨多次翻译保留。 */
+  cardW: CARD.width,
+  /** 用户正在拖边缘缩放：期间暂停"按内容改窗口高度"（交给 EXITSIZEMOVE 后重排）。 */
+  sizing: false,
   /** 文字全排下来要多高（可能远高于卡片上限）；由 paintCard 实测回写。 */
   contentHeight: CARD.bodyLine,
   /** 正文滚动偏移（DIP）；内容比卡片矮时恒为 0。 */
@@ -228,6 +232,26 @@ const win = createNativeWindow({
     return hitZone(x / (data.scale ?? 1), y / (data.scale ?? 1), data)
   },
   onMouseDown: () => 'click',
+  // 拖两侧改宽（交接文档 §6 第 24 条）：缩放循环由窗口层（DefWindowProc）驱动，
+  // 这里只负责把"窗口物理像素"换算回卡片 DIP 宽度，并夹在 [minWidth, maxWidth]。
+  minSize: {
+    width: CARD.minWidth + CARD.shadow * 2,
+    height: CARD.headerH + CARD.bodyLine + CARD.padY * 2 + CARD.footerH + CARD.shadow * 2,
+  },
+  maxSize: { width: CARD.maxWidth + CARD.shadow * 2, height: 4000 },
+  onResized: (width, _height, data) => {
+    // 小图标和卡片复用同一个窗口：小图标那 44 DIP 不能被当成卡片宽度。
+    if (data.iconVisible === true) return
+    const s = data.scale ?? 1
+    const next = Math.round(width / s) - CARD.shadow * 2
+    // 窗口刚创建（10×10）与程序化换形态的值都落到这里，夹取范围内才算"用户拖出来的宽度"
+    if (!Number.isFinite(next) || next < CARD.minWidth || next > CARD.maxWidth) return
+    data.cardW = next
+  },
+  onSizing: (sizing, data) => {
+    data.sizing = sizing === true
+    if (!data.sizing) requestPaint() // 拖完：按新宽度重排正文高度
+  },
   onPaint: (painter, width, height, data, scale) => {
     if (data.iconVisible === true) {
       paintTriggerIcon(painter, width, height, data, data.iconScale ?? scale ?? 1)
@@ -247,7 +271,12 @@ const win = createNativeWindow({
       data.langW = measured.langW
       data.copyW = measured.copyW
       data.retryW = measured.retryW
+      // 夹取后的真实卡片宽度（用户拖过就按拖过的来，超过上下限则落到边界）
+      if (typeof measured.cardW === 'number') data.cardW = measured.cardW
     }
+    // 用户正在拖边缘改宽：尺寸由 Windows 的缩放循环给，这一帧别再去 SetWindowPos 打架；
+    // 高度会在 EXITSIZEMOVE 后的那一帧按新宽度重排。
+    if (data.sizing === true) return undefined
     // 尺寸不对就**让 window.mjs 就地调好再重画一帧**（返回想要的矩形），
     // 不要再用 setTimeout 异步重排：流式读取会占住事件循环，那一帧会被裁掉底部。
     const layout = cardLayout(data.bodyHeight, data)

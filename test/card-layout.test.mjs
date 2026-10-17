@@ -461,3 +461,28 @@ test('渲染前把 \\r\\n / \\r 归一化成 \\n：UIA 的行分隔符不能把�
   const broken = paintCard(createFakePainter(), 408, 300, cardData({ text: '第一段。\r第二段。\r第三段。' }), 1)
   assert.ok(broken.contentHeight > oneLine.contentHeight)
 })
+
+test('卡片宽度可拖：cardW 影响窗口宽、正文宽与右缘按钮位置，并夹在 [minWidth, maxWidth]', () => {
+  const dflt = cardLayout(CARD.bodyLine)
+  const wide = cardLayout(CARD.bodyLine, { cardW: 600 })
+
+  assert.equal(dflt.card.w, CARD.width)
+  assert.equal(wide.windowW, 600 + CARD.shadow * 2)
+  assert.equal(wide.text.w, 600 - CARD.padX * 2)
+  assert.equal(wide.hitClose.x, wide.card.x + 600 - CARD.edge - CARD.iconBox)
+  assert.equal(wide.bodyH, dflt.bodyH) // 宽度不改变高度（高度只由内容多少决定）
+  // 上下限夹取
+  assert.equal(cardLayout(CARD.bodyLine, { cardW: 10 }).card.w, CARD.minWidth)
+  assert.equal(cardLayout(CARD.bodyLine, { cardW: 99999 }).card.w, CARD.maxWidth)
+})
+
+test('paintCard 按窗口实际宽度排版：拖宽后正文跟着重排（交接文档 §6 第 24 条）', () => {
+  const painter = createFakePainter()
+  const measured = paintCard(painter, 600 + CARD.shadow * 2, 300, cardData(), 1)
+  assert.equal(measured.cardW, 600)
+  assert.equal(painter.calls.paragraph.at(-1).w, 600 - CARD.padX * 2)
+
+  // 窗口比下限还窄 → 按下限排版并回写真实宽度，免得和窗口尺寸来回抖
+  const narrow = paintCard(createFakePainter(), 120, 300, cardData(), 1)
+  assert.equal(narrow.cardW, CARD.minWidth)
+})

@@ -29,6 +29,7 @@ const WM = {
   MOUSELEAVE: 0x02a3,
   RBUTTONDOWN: 0x0204,
   MOVE: 0x0003,
+  ENTERSIZEMOVE: 0x0231,
   EXITSIZEMOVE: 0x0232,
   GETMINMAXINFO: 0x0024,
   SIZE: 0x0005,
@@ -485,7 +486,14 @@ export function createNativeWindow(options) {
         }
         return 0
       }
+      // 用户开始/结束拖边缘缩放。缩放期间由 DefWindowProc 的模态循环驱动 WM_SIZE，
+      // 调用方据此暂停"按内容改高度"，免得两趟绘制和缩放循环互相打架。
+      case WM.ENTERSIZEMOVE: {
+        options.onSizing?.(true, state.data)
+        return 0
+      }
       case WM.EXITSIZEMOVE: {
+        options.onSizing?.(false, state.data)
         options.onMoved?.(state.x, state.y, state.data)
         return 0
       }
@@ -506,10 +514,16 @@ export function createNativeWindow(options) {
       case WM.GETMINMAXINFO: {
         // 缩放的下限：不然用户能把浮窗拖成一条线，布局就没法看了（尺寸选项是 DIP）。
         const min = options.minSize
-        if (min !== undefined && min !== null) {
+        const max = options.maxSize
+        if (min !== undefined || max !== undefined) {
           const s = scale()
           const info = koffi.decode(BigInt(lParam), MINMAXINFO)
-          info.ptMinTrackSize = { x: Math.round(min.width * s), y: Math.round(min.height * s) }
+          if (min !== undefined && min !== null) {
+            info.ptMinTrackSize = { x: Math.round(min.width * s), y: Math.round(min.height * s) }
+          }
+          if (max !== undefined && max !== null) {
+            info.ptMaxTrackSize = { x: Math.round(max.width * s), y: Math.round(max.height * s) }
+          }
           koffi.encode(BigInt(lParam), MINMAXINFO, info)
         }
         return 0

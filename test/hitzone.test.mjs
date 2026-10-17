@@ -71,11 +71,36 @@ test('命中区跟着 data.bodyHeight 走（卡片被译文撑高后，页脚按
   assert.equal(hitZone(...tallFoot, data()), 'transparent')
 })
 
-test('边界：卡片左上角算卡片内（caption），右下角算 client', () => {
+test('边界：卡片左上角算卡片内（caption），右下角是拖宽热区（resize-right）', () => {
   const layout = cardLayout(CARD.bodyLine)
   const card = layout.card
   assert.equal(hitZone(card.x, card.y, data()), 'caption')
-  assert.equal(hitZone(card.x + card.w, card.y + card.h, data()), 'client')
+  assert.equal(hitZone(card.x + card.w, card.y + card.h, data()), 'resize-right')
+})
+
+test('左右内缘可拖宽：只在正文/页脚区、流式生成中禁用（交接文档 §6 第 24 条）', () => {
+  const layout = cardLayout(CARD.bodyLine, { langW: 115 })
+  const box = layout.card
+  const bodyY = layout.bodyTop + 10
+
+  // 正文区的左右内缘 → 两个拖宽方向
+  assert.equal(hitZone(box.x + 2, bodyY, data()), 'resize-left')
+  assert.equal(hitZone(box.x + box.w - 2, bodyY, data()), 'resize-right')
+  // 头部不算拖宽（那里本来就是标题栏拖动区）
+  assert.equal(hitZone(box.x + 2, box.y + 2, data()), 'caption')
+  // 流式生成中禁用：会和"两趟绘制 + 跟随"抢窗口尺寸
+  assert.equal(hitZone(box.x + 2, bodyY, data({ status: 'running' })), 'client')
+  // 菜单展开时整块 client（点得到菜单行）
+  assert.equal(hitZone(box.x + 2, bodyY, data({ langOpen: true })), 'client')
+})
+
+test('拖宽热区跟着 cardW 走（拖宽后右缘跟到新位置）', () => {
+  const wide = cardLayout(CARD.bodyLine, { cardW: 600 })
+  const box = wide.card
+  const y = wide.bodyTop + 10
+  assert.equal(hitZone(box.x + box.w - 2, y, data({ cardW: 600 })), 'resize-right')
+  // 原来 380 宽时的右缘，现在已经在正文中间，不该再被判成拖宽
+  assert.equal(hitZone(box.x + CARD.width - 2, y, data({ cardW: 600 })), 'client')
 })
 
 test('约定：入参是 DIP 坐标（调用方先除以 data.scale），传物理坐标不该命中按钮', () => {

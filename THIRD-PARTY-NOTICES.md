@@ -27,7 +27,7 @@
 | `companion/native/uia-worker.mjs` | **逐字节相同** | 无（仅顶部加许可头） |
 | `companion/context.mjs` | 同源，少量改动 | worker 统计里增加 `lastError`：UIA 初始化失败原来会被静默吞成"读不到选区"，现在留一份给 `/status` 排障 |
 | `companion/native/gdi.mjs` | 同源，较多改动 | 文本渲染三处：① 连续同格式 token 合成一次 `DrawString`（中文逐字 `DrawString` 会被重复计入字形边距，看起来像字间插了空格）；② 绘制矩形多给一个 em（否则行尾会冒出省略号"…"）；③ 新增行首禁则 `NO_LINE_START`（句末标点不挤到行首） |
-| `companion/native/window.mjs` | 同源，较多改动 | ① **两趟绘制**：`onPaint` 可返回"该换的矩形"，第一帧丢弃不上屏、调好窗口再画第二帧（长文本流式增长时窗口比内容矮会把底部裁掉）；② 阴影外圈返回 `HTTRANSPARENT` 穿透（不然那圈半透明像素会吞点击）；③ 光标形状（`sizeAll` / `arrow`）与 `hitZone` 状态 |
+| `companion/native/window.mjs` | 同源，较多改动 | ① **两趟绘制**：`onPaint` 可返回"该换的矩形"，第一帧丢弃不上屏、调好窗口再画第二帧（长文本流式增长时窗口比内容矮会把底部裁掉）；② 阴影外圈返回 `HTTRANSPARENT` 穿透（不然那圈半透明像素会吞点击）；③ 光标形状（`sizeAll` / `arrow`）与 `hitZone` 状态；④ **可缩放**：`maxSize` 与 `WM_ENTERSIZEMOVE` + `onSizing` 回调（拖两侧改卡片宽度） |
 
 ### 1.2 本项目中**不是**衍生自它的部分
 

@@ -83,7 +83,10 @@ export const SYSTEM_PROMPT = [
   '5. 用该领域通行的译法；拿不准时保留原文。',
 ].join('\n')
 
-const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/
+/** 汉字（CJK 统一表意文字）。`auto` 判语种时**数个数**，不再"见到一个就当中文"。 */
+const CJK_CHAR = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g
+/** 拉丁词（英文等拉丁字母语言按"词"计量）。 */
+const LATIN_WORD = /[A-Za-z][A-Za-z'’-]*/g
 
 const COMPANION_ENTRY = fileURLToPath(new URL('./companion/main.mjs', import.meta.url))
 const COMPANION_CWD = fileURLToPath(new URL('.', import.meta.url))
@@ -337,9 +340,26 @@ export async function pickEffort(ctx, provider, model) {
   }
 }
 
-/** 目标语言标签；`auto` 时按原文有没有 CJK 判定（有中文就译成英文，反之译成中文）。 */
+/**
+ * `auto` 时判断该译成哪种语言：**按"谁占主导"判，不是"有没有汉字"**。
+ *
+ * 旧实现是 `CJK.test(text)` —— 只要原文里出现**一个**汉字就判成"中文"，于是译成英文；
+ * 结果"开头一句中文 + 后面一大段英文"的选区整段被当成中文，输出还是英文（实测踩过）。
+ * 现在按信息量比：**约 2 个汉字 ≈ 1 个英文词**；汉字占主导才译成英文，否则译成中文。
+ * 没有汉字 → 中文；没有拉丁词（纯中文/纯符号）→ 英文。
+ */
+export function detectTargetLanguage(text) {
+  const source = String(text ?? '')
+  const cjk = (source.match(CJK_CHAR) ?? []).length
+  const words = (source.match(LATIN_WORD) ?? []).length
+  if (cjk === 0) return 'zh'
+  if (words === 0) return 'en'
+  return cjk >= words * 2 ? 'en' : 'zh'
+}
+
+/** 目标语言标签；`auto` 走主导语言判定，`zh` / `en` 显式指定。 */
 export function targetLabel(target, text) {
-  const resolved = target === 'zh' || target === 'en' ? target : CJK.test(text) ? 'en' : 'zh'
+  const resolved = target === 'zh' || target === 'en' ? target : detectTargetLanguage(text)
   return resolved === 'en' ? 'English' : '中文（简体）'
 }
 
