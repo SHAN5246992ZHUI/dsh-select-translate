@@ -541,12 +541,13 @@ function openCustomLangInput() {
   setCard({ langOpen: false })
   const s = card.scale || 1
   const wantW = Math.round((card.cardW - CARD.padX * 2) * s)
-  const wantH = Math.round(34 * s)
+  // 圆角容器里再留 8 DIP 内边距给 EDIT（见 input-window.mjs），所以比一行文字略高
+  const wantH = Math.round(38 * s)
   const gap = Math.round(6 * s)
   const x = win.state.x + Math.round(CARD.padX * s)
   const below = win.state.y + win.state.height + gap
   const y = below + wantH <= card.work.bottom ? below : win.state.y - wantH - gap
-  const opened = langInput.open({ x, y, width: wantW, height: wantH, initial: card.customTarget })
+  const opened = langInput.open({ x, y, width: wantW, height: wantH, initial: card.customTarget, scale: s })
   if (!opened) {
     noteError('input', new Error('无法创建自定义语种输入窗'))
     return
