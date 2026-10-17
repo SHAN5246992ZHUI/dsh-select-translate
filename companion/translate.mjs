@@ -116,6 +116,9 @@ export function createTranslator(options = {}) {
             if (firstTokenMs === null) firstTokenMs = now() - startedAt
             answer += event.text
             onEvent({ type: 'delta', chunk: event.text, answer })
+          } else if (event.type === 'start') {
+            // 宿主把"自动"判定出来的目标语言带回来：卡片头部显示「自动·中文」
+            onEvent({ type: 'start', resolved: event.resolved ?? null })
           } else if (event.type === 'done') {
             if (event.text) answer = event.text
             // 把宿主的计时一起带出来：我们的 totalMs 减它 = "卡片落后模型多少"

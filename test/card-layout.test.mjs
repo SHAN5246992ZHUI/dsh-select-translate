@@ -100,26 +100,46 @@ test('页脚：复制/重译各自贴着内容，间距 4（与 .hc-foot 一致�
   assert.equal(layout.hitCopy.y, layout.card.y + CARD.headerH + layout.bodyH + Math.round((CARD.footerH - CARD.iconBox) / 2))
 })
 
-test('语言下拉是覆盖层：展开不改变窗口高度（所以卡片不跳）', () => {
+test('语言下拉：4 行后最小卡片会为菜单长高；够高时仍是纯覆盖层（不跳）', () => {
   const closed = cardLayout(CARD.bodyLine, { langOpen: false, langW: 115 })
   const open = cardLayout(CARD.bodyLine, { langOpen: true, langW: 115 })
 
   assert.equal(open.langMenu === undefined, false)
   assert.equal(closed.langMenu, undefined)
-  assert.equal(open.windowH, closed.windowH)
+  // 最小卡片（正文 25）装不下 4 行菜单 → 展开时长高。旧版 3 行时恰好装得下，所以这里改成了"会长高"。
+  assert.ok(open.card.h > closed.card.h)
+  assert.ok(open.langMenu.y + open.langMenu.h <= open.card.y + open.card.h)
   assert.equal(open.windowW, closed.windowW)
+
+  // 正文本来就够高的卡片：菜单是覆盖层，展开不改变高度
+  const tallClosed = cardLayout(400, { langOpen: false })
+  const tallOpen = cardLayout(400, { langOpen: true })
+  assert.equal(tallOpen.windowH, tallClosed.windowH)
 })
 
-test('语言下拉在最小卡片里放得下（菜单底边不越出卡片）', () => {
+test('语言下拉在卡片里放得下（菜单底边不越出卡片），且第 4 行是"自定义…"', () => {
   const layout = cardLayout(CARD.bodyLine, { langOpen: true })
   const menu = layout.langMenu
 
   assert.equal(menu.h, CARD.langPad * 2 + CARD.langRowH * LANG_IDS.length)
   assert.deepEqual(
     menu.rows.map((row) => row.id),
-    ['auto', 'zh', 'en'],
+    ['auto', 'zh', 'en', 'custom'],
   )
+  assert.equal(LANG_LABELS.custom, '自定义…')
   assert.ok(menu.y + menu.h <= layout.card.y + layout.card.h)
+})
+
+test('头部显示目标语言：自动时显示宿主判定结果，自定义语种直接显示原文', () => {
+  const textsOf = (painter) => painter.calls.text.map((call) => call.text)
+
+  const auto = createFakePainter()
+  paintCard(auto, 408, 195, cardData({ target: 'auto', resolved: 'zh' }), 1)
+  assert.ok(textsOf(auto).includes('自动·中文'))
+
+  const custom = createFakePainter()
+  paintCard(custom, 408, 195, cardData({ target: '日本語' }), 1)
+  assert.ok(textsOf(custom).includes('日本語'))
 })
 
 test('langRowAt：三行各自命中，行外/菜单外/未展开都是 null', () => {
@@ -129,6 +149,7 @@ test('langRowAt：三行各自命中，行外/菜单外/未展开都是 null', (
   assert.equal(langRowAt(menu.x + 5, menu.y + CARD.langPad + 1, layout), 'auto')
   assert.equal(langRowAt(menu.x + 5, menu.y + CARD.langPad + CARD.langRowH + 1, layout), 'zh')
   assert.equal(langRowAt(menu.x + 5, menu.y + CARD.langPad + CARD.langRowH * 2 + 1, layout), 'en')
+  assert.equal(langRowAt(menu.x + 5, menu.y + CARD.langPad + CARD.langRowH * 3 + 1, layout), 'custom')
   // 内边距那一条不算任何行
   assert.equal(langRowAt(menu.x + 5, menu.y + 1, layout), null)
   // 菜单之外
@@ -160,9 +181,9 @@ test('命中测试：六个按钮各自命中，按钮之间的空档与卡片�
   assert.equal(cardHitTest(layout.text.x + 10, layout.text.y + 10, layout), null)
 })
 
-test('LANG_IDS / LANG_LABELS 与 client.js 的 LANGS 一致', () => {
-  assert.deepEqual(LANG_IDS, ['auto', 'zh', 'en'])
-  assert.deepEqual(LANG_LABELS, { auto: '自动', zh: '中文', en: 'English' })
+test('LANG_IDS / LANG_LABELS：前三个与 client.js 的 LANGS 一致，第 4 个是原生卡片独有的"自定义…"', () => {
+  assert.deepEqual(LANG_IDS.slice(0, 3), ['auto', 'zh', 'en'])
+  assert.deepEqual(LANG_LABELS, { auto: '自动', zh: '中文', en: 'English', custom: '自定义…' })
 })
 
 /* ────────────────────────── paintCard ────────────────────────── */

@@ -43,6 +43,7 @@ import { createGestureDetector } from './gesture.mjs'
 import { hitZone } from './hitzone.mjs'
 import { createEdgeDetector, pointInCardRect } from './input.mjs'
 import { createGdi } from './native/gdi.mjs'
+import { createInputWindow } from './native/input-window.mjs'
 import { createNativeWindow } from './native/window.mjs'
 import { computePlacement, clampWindowToWork } from './placement.mjs'
 import { createTranslator } from './translate.mjs'
@@ -147,6 +148,13 @@ const card = {
   text: '',
   source: '',
   target: 'auto',
+  /** 宿主回传的"自动"判定结果（`zh` / `en`），用来在头部显示「自动·中文」。 */
+  resolved: null,
+  /** 用户自定义过的目标语种（如 `日本語`）；下拉里再点"自定义…"时作为输入框初值。 */
+  customTarget: '',
+  /** 自定义语种输入窗是否开着（回车提交、Esc/失焦取消）。 */
+  inputOpen: false,
+  inputOpenedAt: 0,
   /** 触发模式：`auto` = 即划即译；`icon` = 划词出小图标、点击才译。 */
   mode: INITIAL_MODE,
   // ↓ 小图标那套（只在 iconVisible 时有意义）
@@ -350,6 +358,9 @@ const win = createNativeWindow({
   },
 })
 
+/** 自定义语种的输入小窗：卡片是 WS_EX_NOACTIVATE 收不到键盘，只能另开一个可激活窗口（见 input-window.mjs）。 */
+const langInput = createInputWindow({ api })
+
 /**
  * 改正文滚动位置（滚轮走这里）。
  * 夹取用**卡片实测的** contentHeight / bodyHeight：内容比卡片矮时上限就是 0，滚不动。
@@ -398,6 +409,11 @@ function hideCard() {
   card.langOpen = false
   card.scroll = 0
   hoverZone = null
+  // 关卡片时把自定义语种输入小窗一起收掉，别留一个孤儿窗口在屏幕上
+  if (langInput.isOpen()) {
+    langInput.close()
+    card.inputOpen = false
+  }
   // 关卡片 = 中断在途请求（Esc / ✕ / 点外部关闭都走这里）。
   // 不中断的话模型会继续跑完：用户看不到，但照常计费（设计文档 F-18）。
   translator.cancel()
@@ -510,10 +526,44 @@ function setMode(mode) {
   return next
 }
 
-/** 选了目标语言：收起菜单并用同一段原文重译。 */
+/** 选了目标语言：收起菜单并用同一段原文重译。`custom` 走原生输入小窗。 */
 function pickLang(id) {
+  if (id === 'custom') return openCustomLangInput()
   setCard({ langOpen: false, target: id, copied: false })
   void startTranslate(card.source, id)
+}
+
+/**
+ * 打开"自定义语种"输入小窗：贴在卡片下方（越界放上方），宽度跟卡片正文区一致。
+ * 回车提交、Esc 取消、点到别处（失焦）也取消 —— 见轮询里的 `inputOpen` 分支。
+ */
+function openCustomLangInput() {
+  setCard({ langOpen: false })
+  const s = card.scale || 1
+  const wantW = Math.round((card.cardW - CARD.padX * 2) * s)
+  const wantH = Math.round(34 * s)
+  const gap = Math.round(6 * s)
+  const x = win.state.x + Math.round(CARD.padX * s)
+  const below = win.state.y + win.state.height + gap
+  const y = below + wantH <= card.work.bottom ? below : win.state.y - wantH - gap
+  const opened = langInput.open({ x, y, width: wantW, height: wantH, initial: card.customTarget })
+  if (!opened) {
+    noteError('input', new Error('无法创建自定义语种输入窗'))
+    return
+  }
+  setCard({ inputOpen: true, inputOpenedAt: Date.now() })
+}
+
+/** 关掉输入小窗；`commit` 为 true 时把输入内容当作自定义语种并重译。 */
+function closeCustomLangInput(commit) {
+  if (langInput.isOpen() !== true) return
+  const value = commit === true ? langInput.value().trim() : ''
+  langInput.close()
+  setCard({ inputOpen: false })
+  if (value === '') return
+  const target = value.slice(0, 24)
+  setCard({ customTarget: target, target, copied: false })
+  if (card.source !== '') void startTranslate(card.source, target)
 }
 
 function handleCardAction(zone) {
@@ -561,6 +611,11 @@ const translator = createTranslator({
 })
 
 async function startTranslate(text, target) {
+  // 新一次翻译：把自定义语种输入小窗收掉（别让它挂在那儿）
+  if (langInput.isOpen()) {
+    langInput.close()
+    card.inputOpen = false
+  }
   // 取词文本整理（交接文档 §6 第 23 条）：
   // ① `\r\n`/`\r` → `\n`（UIA 的行分隔符不是 `\n`，而提示词与原生排版都只认 `\n`）；
   // ② PDF 这类提供方会把整段压成一行、连空格都丢 —— 这时按行内编号/分条标记**确定性**插回换行
@@ -578,6 +633,7 @@ async function startTranslate(text, target) {
     text: '',
     source,
     target,
+    resolved: null,
     visible: true,
     langOpen: false,
     copied: false,
@@ -587,7 +643,8 @@ async function startTranslate(text, target) {
 
   // run 内部会先取消上一次在途请求
   const outcome = await translator.run({ text: source, target, requestId }, (event) => {
-    if (event.type === 'delta') setCard({ text: event.answer, status: 'running' })
+    if (event.type === 'start') setCard({ resolved: event.resolved ?? null })
+    else if (event.type === 'delta') setCard({ text: event.answer, status: 'running' })
     else if (event.type === 'error') setCard({ text: event.message, status: 'error' })
     else if (event.type === 'done') {
       finish = event.finish ?? null
@@ -707,11 +764,23 @@ const point = {}
  * 代价：这一下 Esc 也会照常传给下面的应用（没有键盘钩子就拦不住）。
  */
 const isEscapeEdge = createEdgeDetector()
+const isEnterEdge = createEdgeDetector()
 const timer = setInterval(() => {
   state.polls += 1
   try {
     if (!api.GetCursorPos(point)) return
-    if (isEscapeEdge((api.GetAsyncKeyState(0x1b /* VK_ESCAPE */) & 0x8000) !== 0)) {
+    const escPressed = (api.GetAsyncKeyState(0x1b /* VK_ESCAPE */) & 0x8000) !== 0
+    const enterEdge = isEnterEdge((api.GetAsyncKeyState(0x0d /* VK_RETURN */) & 0x8000) !== 0)
+    if (card.inputOpen === true) {
+      // 自定义语种输入窗开着：回车提交、Esc 取消、点到别处（窗口失焦）也取消
+      if (enterEdge) closeCustomLangInput(true)
+      else if (isEscapeEdge(escPressed)) closeCustomLangInput(false)
+      else if (langInput.focused() !== true && Date.now() - card.inputOpenedAt > 400) {
+        // 前台锁可能拒绝一次 SetForegroundWindow：过 400ms 还没焦点就再抢一次，
+        // 1.5s 仍然抢不到才收起来（多半是用户自己点到别处了）。
+        if (langInput.focus() !== true && Date.now() - card.inputOpenedAt > 1500) closeCustomLangInput(false)
+      }
+    } else if (isEscapeEdge(escPressed)) {
       if (card.iconVisible === true) hideIcon()
       else if (card.visible) hideCard()
     }

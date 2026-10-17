@@ -77,9 +77,26 @@ const COLOR = {
   shadow: 0xff_10_1b_32,
 }
 
-/** 语言下拉的顺序与显示名（与 client.js 的 LANGS 一致）。 */
-export const LANG_IDS = ['auto', 'zh', 'en']
-export const LANG_LABELS = { auto: '自动', zh: '中文', en: 'English' }
+/** 语言下拉的顺序与显示名（与 client.js 的 LANGS 一致；`custom` 是"输入自定义语种"那一行）。 */
+export const LANG_IDS = ['auto', 'zh', 'en', 'custom']
+export const LANG_LABELS = { auto: '自动', zh: '中文', en: 'English', custom: '自定义…' }
+
+/**
+ * 头部显示的目标语言文案。
+ *  - 预设：中文 / English；
+ *  - **自动**：宿主把判定结果随 `start` 帧回传（`data.resolved`），显示成「自动·中文」，
+ *    不然用户永远不知道"自动"到底译成什么语言；
+ *  - **自定义语种**：`target` 本身就是用户填的语言名，直接显示（截断到 8 字，别把头部撑爆）。
+ */
+function targetText(data) {
+  const target = data.target
+  if (target === 'zh') return '中文'
+  if (target === 'en') return 'English'
+  if (target !== 'auto' && target !== undefined && target !== null) return String(target).slice(0, 8)
+  if (data.resolved === 'zh') return '自动·中文'
+  if (data.resolved === 'en') return '自动·English'
+  return '自动'
+}
 
 /**
  * 划词小图标（第二个触发模式用）。逐条对齐 `client.js` 的 `.hc-mini`：
@@ -204,13 +221,15 @@ export function cardLayout(bodyHeight, m = {}) {
   const copyW = m.copyW ?? CARD.copyW
   const retryW = m.retryW ?? CARD.retryW
 
-  // 正文只受"文字多少"影响；下拉是覆盖层，**不参与高度计算**。
-  // 卡片最小高度 = 44 + (25+30) + 40 = 139，而下拉最低点 = 40 + 98 = 138，
-  // 所以最小卡片本来就容得下菜单，展开时不需要长高（也就不会跳）。
+  // 正文只受"文字多少"影响；下拉是覆盖层。3 行时最小卡片 139 刚好装下菜单（不改变高度）；
+  // 4 行（多了"自定义…"）就装不下了，所以**只有菜单展开且卡片太矮时**才长高，高度由 paintCard 两趟重排。
   const bodyH = Math.max(CARD.bodyLine, bodyHeight) + CARD.padY * 2
+  const menuBottom = CARD.langTop + CARD.langPad * 2 + CARD.langRowH * LANG_IDS.length
+  const minBodyForMenu = Math.max(0, menuBottom - CARD.headerH - CARD.footerH)
+  const finalBodyH = langOpen ? Math.max(bodyH, minBodyForMenu) : bodyH
   // 卡片宽度：默认 380，用户拖两侧后由 `m.cardW` 传入（夹在 [minWidth, maxWidth]）
   const cardW = Math.max(CARD.minWidth, Math.min(CARD.maxWidth, Math.round(m.cardW ?? CARD.width)))
-  const cardH = CARD.headerH + bodyH + CARD.footerH
+  const cardH = CARD.headerH + finalBodyH + CARD.footerH
   const left = CARD.shadow
   const top = CARD.shadow
   const right = left + cardW - CARD.edge
@@ -222,7 +241,7 @@ export function cardLayout(bodyHeight, m = {}) {
   const pinX = dividerX - divGap - icon
   const boltX = pinX - step
 
-  const footY = top + CARD.headerH + bodyH + Math.round((CARD.footerH - icon) / 2)
+  const footY = top + CARD.headerH + finalBodyH + Math.round((CARD.footerH - icon) / 2)
   const langX = left + CARD.langLeft
   const langY = top + CARD.langTop
   const rows = LANG_IDS.map((id, index) => ({
@@ -237,13 +256,13 @@ export function cardLayout(bodyHeight, m = {}) {
     windowH: cardH + CARD.shadow * 2,
     card: { x: left, y: top, w: cardW, h: cardH },
     bodyTop: top + CARD.headerH,
-    bodyH,
-    footTop: top + CARD.headerH + bodyH,
+    bodyH: finalBodyH,
+    footTop: top + CARD.headerH + finalBodyH,
     text: {
       x: left + CARD.padX,
       y: top + CARD.headerH + CARD.padY,
       w: cardW - CARD.padX * 2,
-      h: bodyH - CARD.padY * 2,
+      h: finalBodyH - CARD.padY * 2,
     },
     // 头部命中区。顺序（自右向左）：关闭 │ 分隔线 │ 钉住　即划即译 ｜ 语言
     hitClose: { x: closeX, y: top + (CARD.headerH - icon) / 2, w: icon, h: icon },
@@ -431,7 +450,7 @@ export function paintCard(painter, width, height, data, s) {
 
   // 头部"语言"按钮宽度：padding + 图标 + 间距 + 标题 + 间距 + 目标语言 + 间距 + 箭头 + padding
   const titleSize = CARD.titleFont * s
-  const label = data.target === 'zh' ? '中文' : data.target === 'en' ? 'English' : '自动'
+  const label = targetText(data)
   const titleW = labelWidth(painter, '翻译', titleSize, s)
   const labelW = labelWidth(painter, label, titleSize, s)
   const langW = CARD.headPadX * 2 + CARD.iconSize + CARD.headGap * 3 + titleW + labelW + CARD.caretSize

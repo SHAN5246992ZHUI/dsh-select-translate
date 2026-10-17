@@ -357,10 +357,29 @@ export function detectTargetLanguage(text) {
   return cjk >= words * 2 ? 'en' : 'zh'
 }
 
-/** 目标语言标签；`auto` 走主导语言判定，`zh` / `en` 显式指定。 */
+/**
+ * 目标语言标签（写进提示词的"目标语言：…"）。
+ *  - `auto`：按主导语言判定（见 `detectTargetLanguage`）；
+ *  - `zh` / `en`：预设；
+ *  - **其它字符串 = 用户自定义语种**（如 `日本語`），原样交给模型。
+ */
 export function targetLabel(target, text) {
-  const resolved = target === 'zh' || target === 'en' ? target : detectTargetLanguage(text)
-  return resolved === 'en' ? 'English' : '中文（简体）'
+  if (target === 'zh') return '中文（简体）'
+  if (target === 'en') return 'English'
+  if (target === 'auto') return detectTargetLanguage(text) === 'en' ? 'English' : '中文（简体）'
+  return String(target)
+}
+
+/**
+ * 目标语言参数：预设白名单 + **自定义语种**（自由字符串）。
+ * 自由字符串要截断：它会原样进提示词，不能让任意长内容挤进来。
+ */
+export function normalizeTarget(value) {
+  if (typeof value !== 'string') return 'auto'
+  const trimmed = value.trim()
+  if (trimmed === '' || trimmed === 'auto') return 'auto'
+  if (trimmed === 'zh' || trimmed === 'en') return trimmed
+  return trimmed.slice(0, 24)
 }
 
 /**
@@ -425,7 +444,7 @@ export async function handleTranslate(ctx, req, res) {
     if (text.length > MAX_TEXT) throw new Error(`text is longer than ${MAX_TEXT} characters`)
     args = {
       text,
-      target: parsed.target === 'zh' || parsed.target === 'en' ? parsed.target : 'auto',
+      target: normalizeTarget(parsed.target),
       requestId: typeof parsed.requestId === 'string' ? parsed.requestId : '',
     }
   } catch (error) {
@@ -455,7 +474,15 @@ export async function handleTranslate(ctx, req, res) {
   let usage = null
   let finish = null
 
-  sink.send({ type: 'start', requestId: args.requestId, provider: route.provider, model: route.model, reasoningEffort: effort ?? null })
+  sink.send({
+    type: 'start',
+    requestId: args.requestId,
+    provider: route.provider,
+    model: route.model,
+    reasoningEffort: effort ?? null,
+    // 卡片头部要显示"自动"到底判成了哪种语言（见 companion/card.mjs 的 targetText）。
+    resolved: args.target === 'auto' ? detectTargetLanguage(args.text) : args.target,
+  })
 
   try {
     const stream = ctx.llm.stream({

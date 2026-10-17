@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { detectTargetLanguage, handleTranslate, maxTokensFor, modelLimits, pickEffort, SYSTEM_PROMPT, targetLabel } from '../index.js'
+import { detectTargetLanguage, handleTranslate, maxTokensFor, modelLimits, normalizeTarget, pickEffort, SYSTEM_PROMPT, targetLabel } from '../index.js'
 
 /* ────────────────────────── 假 req / res / ctx ────────────────────────── */
 
@@ -313,13 +313,53 @@ test('handleTranslate：客户端断开（Esc / 新一次划词）→ abort 掉�
   assert.equal(res.writableEnded, true)
 })
 
-test('handleTranslate：没给 target 或给了乱七八糟的 target 都按 auto 处理', async () => {
-  for (const target of [undefined, 'fr', 42]) {
+test('handleTranslate：没给 target → auto；预设照旧；其它字符串当自定义语种原样进提示词', async () => {
+  // 没给 / 非字符串 → auto（按主导语言判定：纯中文 → English）
+  for (const target of [undefined, 42]) {
     const { ctx, captured } = fakeCtx({ chunks: [] })
     const { promise } = call(ctx, { text: '你好', target })
     await promise
     assert.equal(captured.args.messages[0].content[0].text, '目标语言：English\n\n你好')
   }
+  // 自定义语种（下拉里的"自定义…"填进来的）→ 原样交给模型
+  {
+    const { ctx, captured } = fakeCtx({ chunks: [] })
+    const { promise } = call(ctx, { text: '你好', target: '日本語' })
+    await promise
+    assert.equal(captured.args.messages[0].content[0].text, '目标语言：日本語\n\n你好')
+  }
+  // 超长自定义语种被截断到 24 字（它会原样进提示词，不能让任意长内容挤进来）
+  {
+    const { ctx, captured } = fakeCtx({ chunks: [] })
+    const { promise } = call(ctx, { text: '你好', target: 'x'.repeat(50) })
+    await promise
+    assert.equal(captured.args.messages[0].content[0].text, '目标语言：' + 'x'.repeat(24) + '\n\n你好')
+  }
+})
+
+test('start 帧带 resolved：auto 回传判定结果，自定义语种回传原值（卡片头部靠它显示"自动·中文"）', async () => {
+  {
+    const { ctx } = fakeCtx({ chunks: [] })
+    const { res, promise } = call(ctx, { text: 'Hello world', target: 'auto' })
+    await promise
+    assert.equal(res.events().find((event) => event.type === 'start').resolved, 'zh')
+  }
+  {
+    const { ctx } = fakeCtx({ chunks: [] })
+    const { res, promise } = call(ctx, { text: '你好', target: '日本語' })
+    await promise
+    assert.equal(res.events().find((event) => event.type === 'start').resolved, '日本語')
+  }
+})
+
+test('normalizeTarget：空/非字符串 → auto，预设透传，自定义语种截断 24 字', () => {
+  assert.equal(normalizeTarget(undefined), 'auto')
+  assert.equal(normalizeTarget(''), 'auto')
+  assert.equal(normalizeTarget('  auto '), 'auto')
+  assert.equal(normalizeTarget('zh'), 'zh')
+  assert.equal(normalizeTarget('en'), 'en')
+  assert.equal(normalizeTarget(' 日本語 '), '日本語')
+  assert.equal(normalizeTarget('x'.repeat(50)).length, 24)
 })
 
 /* ────────────────────────── 路由令牌（上架前的安全卫生）────────────────────────── */
