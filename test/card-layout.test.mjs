@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { CARD, cardHitTest, cardLayout, clampScroll, LANG_IDS, LANG_LABELS, langRowAt, paintCard } from '../companion/card.mjs'
+import { CARD, cardHitTest, cardLayout, clampScroll, LANG_IDS, LANG_LABELS, langRowAt, normalizeLineBreaks, paintCard } from '../companion/card.mjs'
 import { createFakePainter } from './support/fake-painter.mjs'
 
 /** paintCard 需要的状态（缺省值就是"刚出译文、没悬停、没下拉"）。 */
@@ -441,4 +441,22 @@ test('⚡ 的高亮判据是 mode：auto 亮、icon 不亮（关掉 = 走小图�
   const legacy = createFakePainter()
   paintCard(legacy, 408, 195, cardData({ mode: undefined }), 1)
   assert.ok(accentLines(legacy) > 0)
+})
+
+test('渲染前把 \\r\\n / \\r 归一化成 \\n：UIA 的行分隔符不能把分段挤成一行', () => {
+  // 归一化函数本身：三种行分隔符统一成 \n，非字符串当空串
+  assert.equal(normalizeLineBreaks('a\r\nb\rc\nd'), ['a', 'b', 'c', 'd'].join('\n'))
+  assert.equal(normalizeLineBreaks(undefined), '')
+
+  // 走一遍真 paintCard：正文必须拿到归一化后的文本（`\r` 在排版里不是换行，只会被画成同一行）
+  const painter = createFakePainter()
+  paintCard(painter, 408, 300, cardData({ text: '第一段。\r\n第二段。\r第三段。' }), 1)
+  const body = painter.calls.paragraph.at(-1)
+  assert.equal(body.text.includes('\r'), false)
+  assert.equal(body.text, ['第一段。', '第二段。', '第三段。'].join('\n'))
+
+  // 分段文本应当比挤成一行更高 —— 证明换行真的参与排版，而不是被当普通字符
+  const oneLine = paintCard(createFakePainter(), 408, 300, cardData({ text: '第一段。第二段。第三段。' }), 1)
+  const broken = paintCard(createFakePainter(), 408, 300, cardData({ text: '第一段。\r第二段。\r第三段。' }), 1)
+  assert.ok(broken.contentHeight > oneLine.contentHeight)
 })

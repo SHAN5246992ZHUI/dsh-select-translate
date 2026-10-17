@@ -29,6 +29,7 @@ import {
   cardLayout,
   clampScroll,
   langRowAt,
+  normalizeLineBreaks,
   paintCard,
   paintTriggerIcon,
   triggerIconHit,
@@ -531,7 +532,10 @@ const translator = createTranslator({
 })
 
 async function startTranslate(text, target) {
-  if (text.trim() === '') return
+  // 行分隔符归一化：UIA 常给 `\r`，而提示词与原生排版都只认 `\n`（交接文档 §6 第 23 条）。
+  // 放在这个入口，手势 / 小图标 / /simulate 三条路都覆盖到。
+  const source = normalizeLineBreaks(text)
+  if (source.trim() === '') return
   const requestId = card.requestId + 1
   let finish = null
   let hostTiming = null
@@ -540,7 +544,7 @@ async function startTranslate(text, target) {
     requestId,
     status: 'running',
     text: '',
-    source: text,
+    source,
     target,
     visible: true,
     langOpen: false,
@@ -550,7 +554,7 @@ async function startTranslate(text, target) {
   })
 
   // run 内部会先取消上一次在途请求
-  const outcome = await translator.run({ text, target, requestId }, (event) => {
+  const outcome = await translator.run({ text: source, target, requestId }, (event) => {
     if (event.type === 'delta') setCard({ text: event.answer, status: 'running' })
     else if (event.type === 'error') setCard({ text: event.message, status: 'error' })
     else if (event.type === 'done') {
@@ -570,7 +574,7 @@ async function startTranslate(text, target) {
   state.lastTranslate = {
     at: Date.now(),
     requestId,
-    chars: text.length,
+    chars: source.length,
     answerChars: outcome.answer.length,
     firstTokenMs: outcome.firstTokenMs,
     totalMs: outcome.totalMs,
@@ -619,7 +623,7 @@ async function handleGesture(gesture) {
     noteError('probe', error)
   }
 
-  const selection = typeof probe?.selection === 'string' ? probe.selection.trim() : ''
+  const selection = typeof probe?.selection === 'string' ? normalizeLineBreaks(probe.selection).trim() : ''
   state.lastProbe = {
     at: Date.now(),
     gesture: { kind: gesture.kind, x: gesture.x, y: gesture.y },

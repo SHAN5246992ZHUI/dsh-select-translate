@@ -384,6 +384,15 @@ function paintShadow(painter, rect, radius, s) {
 /* ────────────────────────── 绘制 ────────────────────────── */
 
 /**
+ * 行分隔符归一化：**UIA 的选区文本常用 `\r`（或 `\r\n`）换行，而排版只把 `\n` 当硬换行** ——
+ * `\r` 会被当成普通字符画进同一行，于是"原文分了段、译文却挤成一段"（交接文档 §6 第 23 条）。
+ * 统一成 `\n`。导出是为了让单测直接钉住它。
+ */
+export function normalizeLineBreaks(text) {
+  return String(text ?? '').replace(/\r\n?/g, '\n')
+}
+
+/**
  * 画一整张卡片。
  * @param painter - gdi.mjs 的 painterFromHdc 产物。
  * @param width/height - 窗口物理像素（含阴影外扩）。
@@ -396,7 +405,8 @@ function paintShadow(painter, rect, radius, s) {
  */
 export function paintCard(painter, width, height, data, s) {
   const running = data.status === 'running'
-  const text = typeof data.text === 'string' ? data.text : ''
+  // 归一化放在绘制入口：译文、错误文案、假流式都走这里，一处覆盖全部来源。
+  const text = normalizeLineBreaks(data.text)
   const shown = text === '' ? (running ? '翻译中…' : '') : text
   const bodySize = text === '' ? 14 * s : CARD.bodyFont * s
   const bodyLine = text === '' ? 25 * s : CARD.bodyLine * s
