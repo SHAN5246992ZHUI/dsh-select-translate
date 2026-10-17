@@ -15,7 +15,8 @@ import { readFileSync } from 'node:fs'
 
 import { resolveRuntimeFile } from '../../settings.mjs'
 
-const HOST = 'http://127.0.0.1:19387/dsh-select-translate/api'
+/** 宿主 origin 的兜底值：正常情况从运行时文件读（桌面端端口不是固定的）。 */
+const DEFAULT_HOST_ORIGIN = 'http://127.0.0.1:19387'
 const CARD = { width: 380, shadow: 14, headerH: 44, footerH: 40, bodyLine: 25, padY: 15, edge: 8 }
 const TRIGGER = { size: 24, shadow: 10, gap: 12 }
 const TRIGGER_WINDOW = TRIGGER.size + TRIGGER.shadow * 2
@@ -56,6 +57,11 @@ if (bootRuntime === null || typeof bootRuntime.hostToken !== 'string' || bootRun
   process.exit(1)
 }
 const HOST_TOKEN = bootRuntime.hostToken
+/**
+ * 宿主 origin 从**运行时文件**读：桌面端端口不是固定的（旧稿硬编码 19387，端口一变就连不上，
+ * 表现为 `fetch failed / ECONNREFUSED 127.0.0.1:19387`，会被误当成冒烟失败）。
+ */
+const HOST = `${String(bootRuntime.origin ?? DEFAULT_HOST_ORIGIN).replace(/\/$/, '')}/dsh-select-translate/api`
 /** 打宿主路由（自动带令牌）。 */
 const hostJson = (path, options = {}) => json(HOST + path, { ...options, headers: { 'content-type': 'application/json', 'x-dsh-select-translate-token': HOST_TOKEN, ...(options.headers ?? {}) } })
 const hostGet = (path) => hostJson(path)
