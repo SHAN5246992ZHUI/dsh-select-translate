@@ -426,7 +426,7 @@ export function paintCard(painter, width, height, data, s) {
   const bodySize = text === '' ? 14 * s : CARD.bodyFont * s
   const bodyLine = text === '' ? 25 * s : CARD.bodyLine * s
 
-  // 卡片宽度按**窗口实际宽度**反推：用户拖两侧改宽后正文要跟着重排（交接文档 §6 第 24 条）。
+  // 卡片宽度按**窗口实际宽度**反推：用户拖两侧改宽后正文要跟着重排。
   const cardW = Math.max(CARD.minWidth, Math.min(CARD.maxWidth, Math.round(width / s) - CARD.shadow * 2))
 
   // 先量：正文该多高，窗口就该多高

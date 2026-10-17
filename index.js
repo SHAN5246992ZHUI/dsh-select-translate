@@ -9,7 +9,7 @@
  *  3. 拉起 / 看护伴生进程（全局取词那一半）。
  *
  * 翻译提示词刻意拆成"逐字节稳定的 system + 只在末尾变化的 user"，
- * 这样固定前缀能被上下文缓存命中（成本设计见 方案.md §4）。
+ * 这样固定前缀能被上下文缓存命中。
  */
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -321,7 +321,7 @@ function routeOf(ctx) {
 /**
  * 挑"最不思考"的一档。
  *
- * 设计文档 D-11 想要 `thinking: disabled`；DSH 里这个旋钮叫 `reasoningEffort`，
+ * 我们想要"关掉深度思考"；DSH 里这个旋钮叫 `reasoningEffort`，
  * 有没有真正的"关"取决于模型能力——所以按名字优先找 off/none/minimal/low，
  * 找不到就取适配器给的第一项（列表按适配器偏好排序）。
  */
@@ -383,7 +383,7 @@ export function normalizeTarget(value) {
 }
 
 /**
- * 输出上限按原文长度估（设计文档 §5.1 要求"按源文本长度动态估算"）。
+ * 输出上限按原文长度动态估算。
  *
  * 固定值一定会出问题：**上限被截断时 `finish` 会是 `max-tokens`**（实测 3000 字输入配 1800 上限
  * 就截断了，输出到 3723 字还没收尾）。所以按长度放大，并把天花板抬到 8192（15000 字输入
@@ -525,7 +525,7 @@ export async function handleTranslate(ctx, req, res) {
     })
   } catch (error) {
     // 只记 message，不把 error 对象整个交给宿主日志：适配器可能把请求体塞进 error，
-    // 那样原文就会进 DSH 日志，与 README 的「不落盘」承诺自相矛盾（交接文档 §5.2 P3-16）。
+    // 那样原文就会进 DSH 日志，与 README 的「不落盘」承诺自相矛盾。
     ctx.logger?.warn?.('dsh-select-translate: translate failed', error instanceof Error ? error.message : String(error))
     sink.send({ type: 'error', requestId: args.requestId, message: error instanceof Error ? error.message : String(error) })
   } finally {

@@ -1,5 +1,5 @@
 /**
- * `companion/text.mjs` —— 取词文本整理（交接文档 §6 第 23 条）。
+ * `companion/text.mjs` —— 取词文本整理。
  *
  * 这一块的样本全部来自**真实现场**：在 DSH 里打开 PDF 划选一段题库文字，
  * UIA 的文字层把整段交成**一行**，而且换行处的空格也丢了（`this data` → `thisdata`）——

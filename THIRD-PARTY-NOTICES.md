@@ -36,7 +36,7 @@
 `index.js`、`settings.mjs`、`client.js`、`companion/main.mjs`、`companion/card.mjs`、
 `companion/hitzone.mjs`、`companion/input.mjs`、`companion/placement.mjs`、`companion/translate.mjs`、`test/**`。
 
-判定依据（逐行与块级比对，详见 `交接文档.md` §9.8）：这些文件与上游**最长连续逐字相同片段只有 3–5 行**
+判定依据（逐行与块级比对）：这些文件与上游**最长连续逐字相同片段只有 3–5 行**
 （`client.js` 为 **0 行**），且都是 `}` / `})()` 这类格式巧合，不存在整段沿用。
 
 ### 1.3 上游许可原文（MIT）

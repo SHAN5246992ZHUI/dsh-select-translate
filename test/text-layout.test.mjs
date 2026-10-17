@@ -1,5 +1,5 @@
 /**
- * `companion/native/gdi.mjs` 的 `paragraph` / `tokenize` —— 交接文档 §6「文字排版」那四条。
+ * `companion/native/gdi.mjs` 的 `paragraph` / `tokenize` —— 文字排版那几条实测规则。
  *
  * 这块代码我修了三轮，所以这里钉得最细。做法是**用假 koffi 驱动真代码**：
  * `createGdi(koffi)` 本来就把 koffi 当参数收，于是不需要改生产代码，

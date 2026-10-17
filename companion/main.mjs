@@ -17,7 +17,7 @@
  * ⚠️ 上游的版权声明与 MIT 许可原文，以及逐文件改动说明，见本插件根目录 `THIRD-PARTY-NOTICES.md`
  * ——**那个文件必须随插件一起分发，不得删除**。
  *
- * ⚠️ 刻意**不做剪贴板兜底**（v1 不含 WPS/Office，见 方案.md §2）：取不到就是取不到。
+ * ⚠️ 刻意**不做剪贴板兜底**（v1 不含 WPS/Office）：取不到就是取不到。
  */
 import { createServer } from 'node:http'
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -240,7 +240,7 @@ const win = createNativeWindow({
     return hitZone(x / (data.scale ?? 1), y / (data.scale ?? 1), data)
   },
   onMouseDown: () => 'click',
-  // 拖两侧改宽（交接文档 §6 第 24 条）：缩放循环由窗口层（DefWindowProc）驱动，
+  // 拖两侧改宽：缩放循环由窗口层（DefWindowProc）驱动，
   // 这里只负责把"窗口物理像素"换算回卡片 DIP 宽度，并夹在 [minWidth, maxWidth]。
   minSize: {
     width: CARD.minWidth + CARD.shadow * 2,
@@ -415,7 +415,7 @@ function hideCard() {
     card.inputOpen = false
   }
   // 关卡片 = 中断在途请求（Esc / ✕ / 点外部关闭都走这里）。
-  // 不中断的话模型会继续跑完：用户看不到，但照常计费（设计文档 F-18）。
+  // 不中断的话模型会继续跑完：用户看不到，但照常计费。
   translator.cancel()
   win.hide()
 }
@@ -446,7 +446,7 @@ function placeIcon(anchor) {
 /**
  * 划词结束、且**确实取到了文字**时亮出小图标（图标模式）。
  * 取词在亮图标之前做：这样拖动窗口/滚动条这类"没选出文字"的手势不会弹图标；
- * 而且点击时不必再读一次选区（见交接文档 §5 与 设计文档 §4.3 的差异说明）。
+ * 而且点击时不必再读一次选区（与"点击时再取词"的做法不同，这是有意的）。
  */
 function showIcon(anchor, source) {
   card.iconSource = source
@@ -617,7 +617,7 @@ async function startTranslate(text, target) {
     langInput.close()
     card.inputOpen = false
   }
-  // 取词文本整理（交接文档 §6 第 23 条）：
+  // 取词文本整理：
   // ① `\r\n`/`\r` → `\n`（UIA 的行分隔符不是 `\n`，而提示词与原生排版都只认 `\n`）；
   // ② PDF 这类提供方会把整段压成一行、连空格都丢 —— 这时按行内编号/分条标记**确定性**插回换行
   //    （`prepareSourceText` 的 `restoreListBreaks`，只在完全没有换行时才动手）。

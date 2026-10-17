@@ -1,7 +1,7 @@
 /**
  * `companion/card.mjs` —— 卡片布局与命中区。
  *
- * `client.js` 是冻结的视觉基准，`card.mjs` 必须与它逐条对齐（交接文档 §7）。
+ * `client.js` 是冻结的视觉基准，`card.mjs` 必须与它逐条对齐。
  * 这里钉三类事：
  *  1. **基准常量**：谁想改视觉，先改 `client.js`，这条测试会拦住"只改了一边"；
  *  2. **几何关系**：命中区贴着内容、菜单是覆盖层（展开不改变窗口高度，所以卡片不跳）；
@@ -497,7 +497,7 @@ test('卡片宽度可拖：cardW 影响窗口宽、正文宽与右缘按钮位�
   assert.equal(cardLayout(CARD.bodyLine, { cardW: 99999 }).card.w, CARD.maxWidth)
 })
 
-test('paintCard 按窗口实际宽度排版：拖宽后正文跟着重排（交接文档 §6 第 24 条）', () => {
+test('paintCard 按窗口实际宽度排版：拖宽后正文跟着重排', () => {
   const painter = createFakePainter()
   const measured = paintCard(painter, 600 + CARD.shadow * 2, 300, cardData(), 1)
   assert.equal(measured.cardW, 600)

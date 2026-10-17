@@ -1,302 +1,144 @@
-# dsh-select-translate · 划词翻译
+<div align="center">
 
-在**任意 Windows 应用**里选中文字，鼠标旁弹出一张**只含译文**的原生置顶卡片：
-译文流式出现、跟随最新一行，单次上限 **15000 字**。也可以切成**小图标模式**（先亮图标，点一下才译）。
+<h1>划词翻译</h1>
 
-- 取词走 **UI Automation**（不碰剪贴板）；取不到就安静地不弹 —— 达标线不含 WPS/Office。
-- 翻译走宿主自己的 **`ctx.llm.stream`**：一次裸模型调用，**没有 agent 会话、不进侧栏、不落盘**。
-- 卡片是 GDI+ 自绘的分层窗口，**不抢焦点**；`Esc` / 点卡片外 / ✕ 都能收起，并**中断在途请求**。
-- 长文本：内容超过卡片上限后**视图跟着新译文往上顶**（最后 1–2 行始终是最新的），右侧细滚动条随滚动淡入；
-  翻译结束回到译文开头。滚轮可回看已生成的部分。
-- 保留原文的**分段与编号**：原文分了段、或是有编号/项目符号的列表，译文按同样的结构分行输出（编号原样保留）。
-  PDF 这类取词时文字层会把整段压成一行，插件会按行内编号（`(a)` / `1.` / `①` 等）**确定性地**插回换行。
-- **卡片宽度可拖**：译文出来后把鼠标移到卡片**左右边缘**拖动即可改宽（300–900 DIP），正文自动重排、高度跟着变；
-  宽度在后续几次翻译里保留。流式生成中不响应拖宽（避免和跟随重绘打架）。
-- **自定义译文语种**：语言下拉里除「自动 / 中文 / English」外还有**自定义…**，点它会在卡片旁弹出输入框，
-  输入任意语种（如 `日本語`、`한국어`）后回车即按该语种重译；选「自动」时卡片头部会显示判定结果（如 `自动·中文`）。
+<p><b>在任意 Windows 应用里选中文字 —— 译文就在鼠标旁出现。</b></p>
 
-## 适用范围（重要，先读这段）
+<p>不切窗口、不复制粘贴、不留记录。</p>
 
-| 项 | 说明 |
+<p>
+  <a href="https://www.npmjs.com/package/dsh-select-translate"><img src="https://img.shields.io/npm/v/dsh-select-translate?color=4d6bfe&label=npm" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/dsh-select-translate"><img src="https://img.shields.io/npm/dw/dsh-select-translate?color=4d6bfe" alt="downloads"></a>
+  <a href="https://github.com/SHAN5246992ZHUI/dsh-select-translate/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/dsh-select-translate?color=4d6bfe" alt="license"></a>
+  <img src="https://img.shields.io/badge/platform-Windows-4d6bfe" alt="platform">
+  <a href="https://awesome-dsh-plugin.com/p/SHAN5246992ZHUI/dsh-select-translate/"><img src="https://img.shields.io/badge/DSH-plugin-4d6bfe" alt="DSH plugin"></a>
+</p>
+
+<img src="https://raw.githubusercontent.com/SHAN5246992ZHUI/dsh-select-translate/main/docs/card-translation.png" width="460" alt="划词翻译卡片">
+
+</div>
+
+## ✨ 它好在哪
+
+- **即划即译** —— 选中、松手，卡片就出现在鼠标旁，首字实测 **0.3–0.7 秒**。
+- **绝不打断你** —— 原生置顶卡片，**不抢焦点**：原文选区不会消失，边看边译、还能继续操作下面的应用。
+- **长文也跟得上** —— 单次 **15000 字**。译文边流边显示，卡片自动跟着最新一行；想回看就滚轮，右侧细滚动条随滚动淡入。
+- **保留原文结构** —— 分段、编号列表原样保留；PDF 里被文字层压成一整行的题目，也会按 `(a)` `1.` `①` 重新分条。
+- **卡片随你调** —— 拖左右边缘即可改宽度，正文自动重排；也能切成**小图标模式**，点一下才翻译。
+- **想译成什么就什么** —— 自动 / 中文 / English，或**自定义任意语种**（日本語、한국어、Français…）。
+- **零依赖、零构建** —— 不装原生模块、不跑构建脚本，复用 DSH 自带的能力。
+
+## 🚀 安装
+
+**最简单**：DSH 桌面端 → 设置 → 插件市场 → 搜「划词翻译」→ 一键安装。
+（本插件已被 [awesome-dsh-plugin](https://awesome-dsh-plugin.com/p/SHAN5246992ZHUI/dsh-select-translate/) 收录。）
+
+命令行安装：
+
+```powershell
+dsh plugin --profile web add dsh-select-translate
+```
+
+也可以从源码装：
+
+```powershell
+dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
+```
+
+> 装完**重启 DSH**（宿主半边不会热加载）。已发布到 npm：[`dsh-select-translate`](https://www.npmjs.com/package/dsh-select-translate)。
+> 卸载：市场里点卸载，或 `dsh plugin remove dsh-select-translate`。
+
+## 🖱 怎么用
+
+| 操作 | 效果 |
 |---|---|
-| 系统 | **仅 Windows**。UIA 取词、GDI+ 原生卡片、`user32`/`kernel32` 都是 Windows 专属；非 Windows 上宿主半边会**主动跳过加载**（不拉伴生进程、不注册路由），**不会影响你的 DSH 能不能启动** |
-| 宿主 | DSH 桌面端（实测 `@deepseek-ai/dsh-desktop` 0.2.0-rc.2）。纯 Web 端没有原生窗口，弹不出卡片 |
-| 依赖 | **零额外依赖、零构建**：koffi 复用 DSH 自带的（不装原生模块、**不需要授权构建脚本**）；插件是纯 JS，没有 `build`/`prepare` 脚本 |
-| 权限 | 需要读任意应用的选区与全局鼠标（UIA + 40ms 轮询），并在本机 `127.0.0.1` 上开一个内部 HTTP 口给伴生进程用 |
-| 已知限制 | **以管理员权限运行的应用取不到词**：Windows 的 UIPI 不允许低权限进程读取高权限窗口的 UI Automation，这类窗口里划词**不会弹卡片** —— 属预期行为，不是故障（取词达标线也不含 WPS / Office） |
+| **划词** | 鼠标旁弹出卡片，译文流式出现 |
+| 拖卡片**左右边缘** | 改卡片宽度（300–900），正文自动重排 |
+| **滚轮** | 翻长译文 |
+| `Esc` / 点卡片外 / ✕ | 关闭，并**中断在途请求** |
+| 头部 **⚡** | 即划即译 ↔ 小图标模式（选择会记住） |
+| 头部 **📌** | 钉住：点外面不关；再划词时原地换内容 |
+| 头部 **翻译 ⌄** | 目标语言：自动 / 中文 / English / 自定义… |
+| 页脚 **复制 / 重译** | 复制译文 / 用同一段原文再译一次 |
 
-## 隐私
+选「自动」时，卡片头部会显示判定结果（例如 `自动·中文`），不用猜。
 
-- 选中的文本只经**宿主**发给**你自己在 DSH 里配置的模型**（`ctx.llm.stream`），不经过任何第三方服务。
-- **不落盘**：原文与译文都不写文件、不进会话日志、不进侧栏；伴生进程只在内存里留最近一次取词结果（重启即失）。
-- 唯一写盘的是两个小文件：设置 `$DSH_HOME/dsh-select-translate.json`（只存触发模式 `auto` / `icon`）
-  和运行时文件 `$DSH_HOME/dsh-select-translate-runtime.json`（伴生进程的随机端口 + 下面那个令牌，给本机排障工具用）。
-- 剪贴板只在**你点卡片上的「复制」**时被写入；取词过程完全不碰剪贴板。
-
-## 本地接口与令牌
-
-插件在本机 `127.0.0.1` 上有一个内部 HTTP 口（宿主的 `/dsh-select-translate/api/*` 与伴生进程的随机端口），
-用于宿主 ↔ 伴生进程之间传选区与译文。宿主的那些路由**挂在 DSH 的 `/api` 鉴权栅栏之外**，
-所以除 `/ping` 外都要求请求头 `x-dsh-select-translate-token`（每次启动随机生成）：
-
-- **为什么能挡住网页**：带自定义头的跨源请求会先触发 CORS 预检，而本插件从不回 CORS 头，
-  浏览器因此**根本不会把这个请求发出去**。这是防止任意网页偷打本机端口、花掉你的额度。
-- **边界说清楚**：能扫本机端口、能读文件的**本地进程**仍然拿得到令牌（运行时文件里有）。
-  这道锁防的是网页与顺手一发的脚本，不是同用户的恶意程序。
-
-## 安装
-
-```sh
-# 推荐：在 DSH 里「设置 → 插件市场」搜「划词翻译」，一键安装
-# 或用命令行（等价于市场做的事）：
-dsh plugin --profile web add dsh-select-translate                         # 走 npm（已发布）
-dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate  # 走 GitHub 源码
-```
-
-包同时发布在 npm：[`dsh-select-translate`](https://www.npmjs.com/package/dsh-select-translate)（MIT、**零依赖、零构建**）。
-市场的安装优先级是 **npm 包 → Release tarball → 整仓源码**，所以有 npm 版本时它优先走 npm ——
-预构建安装可以跳过 `allowBuilds` 构建授权那一步。
-
-装完**重启 DSH**（宿主半边不会热加载）。卸载：市场里点卸载，或 `dsh plugin remove dsh-select-translate`。
-
-<details>
-<summary>开发时怎么装（本地目录 + profile patch 层，M1 起就在用）</summary>
-
-M1 没有走 `plugin_manager install_bundle`（当时被 pnpm 供应链策略挡住了，见下），而是直接挂在
-**profile 的用户 patch 层**：
-
-```
-%DSH_HOME%\profiles\desktop\cordis.patch.yml   ← 末尾新增 insert: dsh-select-translate
-%DSH_HOME%\profiles\desktop\node_modules\dsh-select-translate  ← 指向本目录的 junction
-```
-
-装了之后**热生效**，不用重启桌面端。
-
-### 为什么当时没走 plugin_manager
-
-`install_bundle` 会在 profile 目录跑 pnpm，而 pnpm 校验整份 lockfile 时报：
-
-```
-[ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION] dshmarket@1.66.15 was published within the minimumReleaseAge cutoff
-```
-
-这是**既有环境问题，与本插件无关**（`dshmarket` 发布不到 24 小时）。
-三条出路：① 等满 24h；② 按提示放宽 `profiles/desktop/pnpm-workspace.yaml` 的策略；③ 继续用 patch 层。
-
-⚠️ 用 patch 层时，`node_modules\dsh-select-translate` 这个 junction 不在 lockfile 记录里，
-将来跑一次 `pnpm install` 可能被清掉；被清掉后插件会加载失败，重新建 junction 即可。
-⚠️ **自测"市场安装"之前要先卸掉这个 junction 版本**，否则同一个插件会有两条 loader 条目。
-
-</details>
-
-## 怎么卸载
-
-删掉 `profiles/desktop/cordis.patch.yml` 末尾那段 `- insert: ... dsh-select-translate`，或把 `id: dsh-select-translate`
-那行改成 `disabled: true`。改动同样热生效。
-（改动前的原文件备份在 `cordis.patch.yml.profile-backup`。）
-
-## 怎么改代码
-
-- 改 `client.js` → **hot reload**：`client-hmr` 每 500ms 轮询文件，一变就重建并让页面 remount，**不用刷新**。
-  没生效就手动刷新页面。
-- 改 `index.js` / `settings.mjs`（宿主半边）→ 需要**重启桌面端**。
-- 改 `companion/**` → 重启伴生进程即可：`POST /dsh-select-translate/api/system/restart`。
-
-## 两个触发模式
+## 🖼 两种触发方式
 
 | 模式 | 行为 |
 |---|---|
-| **即划即译**（默认） | 划词停手 → 直接出卡片、流式译文 |
-| **小图标** | 划词停手 → 鼠标旁只亮一个 **24px 小圆图标**（与页内 `.hc-mini` 同款）→ **点它才翻译**；鼠标移开 / `Esc` / 点别处就收起 |
+| **即划即译**（默认） | 划词停手就直接出卡片和译文 |
+| **小图标** | 划词停手只亮一个 24px 小圆图标，**点它才翻译**；移开鼠标 / `Esc` / 点别处即收起 |
 
-切换：卡片头部那个 **⚡**（亮 = 即划即译；暗 = 小图标模式）。**切换会持久化**到
-`$DSH_HOME/dsh-select-translate.json`（`{"mode":"auto|icon"}`），重启后保持。
-在图标模式下想切回来：划词 → 点小图标 → 卡片出现 → 点 ⚡。
+<img src="https://raw.githubusercontent.com/SHAN5246992ZHUI/dsh-select-translate/main/docs/icon-mode.png" width="520" alt="小图标模式">
 
-> 取词发生在**亮图标之前**（不是点击时）：所以拖动窗口/滚动条这类"没选出文字"的手势不会弹图标，
-> 点击时也不必再读一次选区。这一条与 `设计文档.md` §4.3 的写法不同，是有意的（见交接文档 §5）。
+## 📏 长文本
 
-## 自检
+超过卡片高度后，视图跟着新译文往上顶——**最新一行永远在窗口里**，翻译结束回到开头；中途往上滚会暂停跟随，滚回底部恢复。
 
-```powershell
-curl.exe -i http://127.0.0.1:19387/dsh-select-translate/api/ping    # 期望 200（路由刻意挂在 /api 栅栏之外）
-curl.exe -i http://127.0.0.1:19387/api/dsh-select-translate/ping    # 期望 401（对照：/api 被 Connection 鉴权栅栏占着）
-```
+<img src="https://raw.githubusercontent.com/SHAN5246992ZHUI/dsh-select-translate/main/docs/streaming-follow.png" width="320" alt="流式跟随">
 
-## 怎么跑测试
+## 🔒 隐私
 
-```powershell
-cd dsh-select-translate
-pnpm test            # 等价于 node --test "test/**/*.test.mjs"
-```
+- 选中的文字只经 **DSH 宿主**发给**你自己配置的模型**，不经过任何第三方服务。
+- **不落盘**：原文和译文都不写文件、不进会话日志、不进侧栏。伴生进程只在内存里留最近一次取词结果，重启即失。
+- **取词完全不碰剪贴板**；剪贴板只在**你点「复制」**时被写入。
+- 写盘只有两个小文件：触发模式设置 `$DSH_HOME/dsh-select-translate.json`，以及给本机排障工具用的运行时文件。
+- 本机内部 HTTP 口需要随机令牌；带自定义头的跨源请求会被 CORS 预检挡在浏览器侧。
 
-**零依赖**：只用内置 `node:test`，不需要 DSH、不需要 koffi、不需要真实窗口或 Windows 桌面。
-当前共 **153 个**测试。
+## ⚠️ 适用范围与已知限制
 
-| 测试文件 | 钉住的东西 |
-|---|---|
-| `test/gesture.test.mjs` | 拖选 5px / 双击 420ms·6px 阈值、最大位移判定、`onPress` 时机、取词 latest-wins 串行队列 |
-| `test/text-layout.test.mjs` | **换行**（交接文档 §6 第 11–15 条）：每行容量、行首禁则、CJK 合并成整行绘制、省略号余量、`dryRun` 与真画高度一致 |
-| `test/text-normalize.test.mjs` | **取词文本整理**（交接文档 §6 第 23 条）：`\r\n`/`\r` → `\n`、PDF 压成一行时按 `(a)`/`1.`/`①` 插回换行、`2.5 GHz` 与正文 `option (a)` 不误拆、幂等 |
-| `test/card-layout.test.mjs` | 卡片几何、命中区、下拉是覆盖层（展开不改变窗口高度）、按钮净宽是 DIP 且与缩放无关 |
-| `test/hitzone.test.mjs` | `HTCAPTION` 区收不到点击（按钮必须排除）、阴影外扩那圈必须穿透 |
-| `test/placement.test.mjs` | 越界翻转、夹进工作区、第二块屏负坐标、125% 缩放的取整；**小图标复用同一套落位** |
-| `test/trigger-icon.test.mjs` | 小图标几何（圆在窗口正中）、**方窗口四角必须穿透**、阴影/白圆/边框/globe 的绘制与 hover 配色 |
-| `test/settings.test.mjs` | 设置默认值/非法值回落、坏 JSON 当没设置、落盘后新实例能读到、写不进去也不抛错 |
-| `test/host.test.mjs` | 宿主 SSE 帧契约（伴生进程照它解析）、`SYSTEM_PROMPT` 字节稳定、abort、`pickEffort` 选 `off`、`maxTokensFor`、15000 字上限、`modelLimits` |
-| `test/context.test.mjs` | UIA worker 超时隔离与自愈、在途请求只保留最新一次 |
+- **仅 Windows**。非 Windows 上插件会主动跳过加载，不会影响 DSH 启动。
+- 需要 **DSH 桌面端**（纯 Web 端没有原生窗口）。
+- **以管理员权限运行的应用取不到词**（Windows UIPI 限制），这是预期行为，不是故障。
+- 取词走 UI Automation，**WPS / Office 不在支持范围**——取不到就安静地不弹。
+- 单次原文上限 **15000 字**。
 
-`test/support/` 是脚手架，**不匹配 `*.test.mjs`**，所以不会被当测试执行：
+## ❓ 常见问题
 
-- `metrics.mjs`：假字体度量，按伴生进程 `/measure` 的**实测值**校准
-  （size 18.75 → 单字盒宽 25.552 / 8 字 160.712 ⇒ 净推进 19.309、前导边距 = size/3）
-- `fake-koffi.mjs`：假 GDI+，**驱动真的 `paragraph`/`tokenize`** 跑换行逻辑
-- `fake-painter.mjs`：记录型 painter，驱动真的 `paintCard`
-- `echo-worker.mjs`：假 UIA worker（按落点 x 切换 正常/超时/报错）
+<details>
+<summary><b>会消耗我的模型额度吗？</b></summary>
 
-> 为了能单测，`index.js` 导出了 `SYSTEM_PROMPT` / `targetLabel` / `pickEffort` / `handleTranslate`；
-> `main.mjs` 把命中区与落位抽成了 `companion/hitzone.mjs` 与 `companion/placement.mjs`（纯函数）。
-> 这些改动不影响插件加载。
+会。每次划词都是一次真实的模型调用，走你自己在 DSH 里配置的模型。关卡片、再划词、点「重译」都会取消在途请求，避免白跑。
+</details>
 
-### 真进程冒烟检查（改过 `companion/**` 之后跑，不必重启 DSH）
+<details>
+<summary><b>用的是哪个翻译模型？</b></summary>
 
-```powershell
-node test/support/smoke-companion.mjs            # 常规 48 项
-node test/support/smoke-companion.mjs --long     # 再追加 9 项：4000 字真翻译 + 逐帧盯窗口不被裁/跟随
-```
+跟着 DSH 当前的默认模型座走，可以在 DSH 设置里换成别的模型。
+</details>
 
-单元测试验的是纯逻辑，这个脚本验的是**跑起来的那个伴生进程**：重启它 → 打它自己的排障端点
-→ 核对命中区、落位/翻转、真实字体度量、真译文、并发划词（取消）、长文本滚动、
-**小图标模式全流程**、**流式跟随与窗口不被裁**、**滚动条几何**、**宿主路由的令牌校验**。
-会真的弹卡片（结束前自动 `/hide`）。前置：DSH 桌面端在跑。失败时以非 0 退出码结束，可当门禁用。
+<details>
+<summary><b>为什么在有些窗口里划词没反应？</b></summary>
 
-> **测试不进安装包**：`package.json` 的 `files` 白名单只含运行时代码，`npm pack` 打出来是 21 个文件，
-> `test/**` 不在其中 —— 跑测试的人是"克隆仓库读源码的人"，普通用户一键安装不会下到测试。
->
-> **它会花一次模型调用**（真翻译那几步），用的是**跑脚本的人自己的额度**；所以别在演示时跑。
-> 脚本自身不做任何截屏、不收集数据，网络访问全部是 `127.0.0.1`（宿主与伴生进程的本地端点）。
+目标应用没有向 UI Automation 暴露文本，或者它是以管理员权限运行的。WPS / Office 属于已知不支持的范围。
+</details>
 
-> **一边用插件一边跑也可以**：脚本会先等一个"静默窗口"（连续 2 秒没有真实手势/外部划词/模式切换），
-> 等不到就把依赖卡片状态的几节标 `⚠ 跳过` 并说明原因 —— 而不是误报一串失败。
-> 它还会**记住并还原你运行前的 ⚡ 模式**（不会把你的选择覆盖成 auto）。
->
-> `--long` 那几步要求**宿主已加载新版 `index.js`**：改过宿主半边就必须重启桌面端
-> （禁用再启用插件也换不掉 ESM 缓存），否则会看到旧的字数上限报错。
-> 「小图标模式」那一节若提示宿主还没有 `/settings` 路由，说明 `index.js` 还没重新加载；
-> 它会自动退回"只验伴生进程侧"，不误报。
+<details>
+<summary><b>卡片为什么不抢焦点，还能不能打字？</b></summary>
 
-## 怎么看到卡片
+卡片是原生分层窗口且刻意不激活，所以不会打断你。需要输入时（自定义语种）会另开一个小输入框，支持中文输入法。
+</details>
 
-1. **设置 → 划词翻译 → 「预览卡片」**（最省事）
-2. 或在页面里**划选任意文字**：停手约 0.28 秒后，卡片出现在鼠标旁（`Esc` 关闭）
+<details>
+<summary><b>页内卡片和系统级卡片有什么区别？</b></summary>
 
-## 卡片上的两个开关
+系统级卡片是真正置顶在所有应用之上的原生窗口；页内卡片是 DSH 页面里的预览/兜底路径。两者交互对齐。
+</details>
 
-| 图标 | 含义 | 行为 |
-|---|---|---|
-| ⚡ | **即划即译**（默认开） | 开：划完停手即出译文。关：**改走小图标模式**（划词只亮 24px 小圆图标，点它才翻译）。开启时图标为强调色；这个开关在**系统级卡片与页内卡片上都可用**，系统级那半边的选择会持久化到 `$DSH_HOME/dsh-select-translate.json`（页内那半边仍存 localStorage） |
-| 📌 | **钉住**（默认关） | 关：点别处即关。开：点别处不关、保留最新译文；**再划词时窗口原地不动，只换译文内容** |
+## 🛠 开发
 
-> ⚡ 与 📌 在系统级卡片上由**伴生进程**处理（`companion/main.mjs`）；页内卡片是独立实现，两态存 localStorage。
+想改代码、跑测试、看实现细节，见 **[docs/DEVELOPMENT.md](https://github.com/SHAN5246992ZHUI/dsh-select-translate/blob/main/docs/DEVELOPMENT.md)**。
 
-## 为什么卡片用 portal 挂到 `document.body`
+- 纯 JS，无构建步骤
+- 单测 **153 个**（零依赖，`pnpm test`）
+- 真进程冒烟检查覆盖取词、落位、真译文、长文本、小图标模式
 
-卡片最初渲染在 `shell.overlay` 里，被应用内其它窗口遮住过。原因是 `.overlayLayer` 自身
-带 `z-index`，构成一个**层叠上下文**——内部 z-index 再高也压不过层外的元素。
+## 📄 许可与致谢
 
-现在用 `ReactDOM.createPortal` 把卡片挂到 `document.body` 下的直挂层
-（`z-index: 2147483000`、`pointer-events:none`，卡片本体自己收回 `auto`）。
-那一层是内联样式写死的，不依赖宿主 CSS 的加载顺序。
+本项目以 **MIT** 发布，见 [LICENSE](https://github.com/SHAN5246992ZHUI/dsh-select-translate/blob/main/LICENSE)。
 
-> 仍然压不过浏览器 **top-layer**（原生 `<dialog>` / `popover`）。如果将来发现某个原生弹层能盖住卡片，那是这一类。
+取词内核衍生自 [dsh-selection-tools](https://github.com/fyisgod/dsh-selection-tools)（作者 [@fyisgod](https://github.com/fyisgod)，MIT）。
+上游的许可原文与逐文件改动说明在 [THIRD-PARTY-NOTICES.md](https://github.com/SHAN5246992ZHUI/dsh-select-translate/blob/main/THIRD-PARTY-NOTICES.md)——
 
-## 系统级卡片怎么关 / 怎么取消
-
-系统级（原生置顶）卡片和页内卡片是两套实现，交互上这几条是对齐的：
-
-| 操作 | 行为 |
-|---|---|
-| **单击卡片外部** | 立刻关闭（未钉住时）。判据是"按下点是落在**卡片本体**里"——卡片窗口比本体大一圈阴影，用窗口矩形判会永远关不掉 |
-| **`Esc`** | 关闭。卡片是 `WS_EX_NOACTIVATE`，**收不到键盘消息**，只能靠 40ms 轮询 `VK_ESCAPE` + 按下边沿检测。⚠️ 代价：这一下 `Esc` 也会照常传给下面的应用（没有键盘钩子就拦不住） |
-| 卡片右上 **✕** | 关闭 |
-| 未钉住时再划一次词 | 关掉旧的、在弹出的新位置显示新的；钉住时**原地**换内容 |
-| 关闭卡片 / 新一次划词 / 点「重译」 | 都会 **abort 掉在途的模型请求**（不 abort 的话模型会跑完——用户看不到，但照常计费） |
-| **滚轮**（鼠标停在卡片上） | 翻长译文。正文超过卡片上限（工作区高 60%）时能滚，没超过时滚不动 |
-
-## 长文本
-
-- 原文上限 **15000 字**：`companion/main.mjs` 与 `index.js` 各拦一道，**两处常量必须一致**（超过则卡片提示拒绝）。
-- 输出上限按原文长度动态估算（`index.js` 的 `maxTokensFor`：下限 1024、上限 8192，系数 0.8）。
-  固定值一定会出问题：**被输出上限截断时 `lastTranslate.finish` 会是 `max-tokens` 或 `length`**
-  （实测 3000 字输入配 1800 上限就截断了，输出到 3723 字还没收尾）。
-- 正文超过卡片上限（工作区高 60%）后用**滚轮**看（`onWheel` + 正文区裁剪）。
-  右侧有一条**细滚动条**（6 宽 / 圆角 3 / `#c9cedb`）：**只在滚动或流式跟随时出现**，
-  停手 0.7s 后约 0.12s 淡出（`CARD.scrollbar` 的 `holdMs`/`fadeMs`，由 40ms 轮询推进透明度）。
-  页内卡片是 `client.js` 用 CSS 收细的原生滚动条，原生卡片是 `card.mjs` 自绘的同尺寸一条
-  （§7 纪律：先改基准再同步）。
-- **长文本也跟得上模型（合帧）**：每个 SSE delta 都同步重绘会把事件循环占满，而单帧重绘随文本变长而变贵
-  （实测 1500 字 **14.8ms** / 4000 字 **19.8ms** / 8000 字 **27.8ms**，最贵 53ms）——
-  于是"显示"反而成了瓶颈。现在**最多每 ~20–120ms 画一帧、永远画最新状态**，间隔按上一帧耗时自适应
-  （画得贵就等久一点：显示降级，而不是把流式读取堵死）。
-  实测一条 4000 字真译文：**宿主（模型）2480ms vs 我们（含显示）2487ms → 只落后 7ms**，
-  期间合帧省掉 **655** 次重绘。诊断字段：`/status` 的 `paints` / `paintSkips` / `paintMs`，
-  以及 `lastTranslate.hostMs`（宿主侧的模型耗时，用来和我们的 `totalMs` 对照）。
-- **流式生成时视图跟随最新**：内容涨到卡片上限后，已生成的译文自动向上顶，
-  **新译文始终出现在窗口最后 1–2 行**；翻译结束后**停止跟随并回到顶部**（停下来时的常态是"从译文开头读"）。
-  流式中途**手动往上滚**会暂停跟随（回看已生成的部分，不被每帧拽回底部），滚回底部即恢复。
-- **流式生成期间窗口不会被裁**：`onPaint` 可以返回"我该换这个尺寸"，`window.mjs` 就**丢弃这一帧、
-  把窗口调到位、重画一帧再上屏**。`/status` 的 `state.resizes` 是"这样被丢弃重画的帧数"，
-  等于旧实现下"底部/页脚被裁掉"的帧数（实测一次长文本流式期间 24 次）。
-  ⚠️ 以前这里用 `setTimeout(0)` 异步重排，而流式读取会一直占住事件循环 → 定时器要等下一次网络读取
-  才轮到 → 整个翻译过程底部都缺着，翻译一结束才补上。
-
-## 视觉基准（重要）
-
-`client.js`（页内卡片）是 **M1 终稿、已冻结**，它是"这张卡片长什么样"的唯一定义。
-
-系统级那条路走 `companion/card.mjs`（GDI+ 自绘，因为要在任意应用之上置顶），
-**它必须与 `client.js` 对齐**：
-
-| 项 | 对齐方式 |
-|---|---|
-| 尺寸/间距/字号/圆角/配色 | 常量逐条抄 `CARD` 与 `COLOR`，与 `client.js` 的 CSS 一一对应 |
-| 图标形状 | `card.mjs` 的 `ICONS` 是 16×16 坐标，**直接由 `client.js` 里 SVG 的 path 数值换算**；不另画 |
-| 阴影 | CSS 的 `box-shadow` 无法 1:1：GDI+ 没有模糊原语，用多层递减透明度的圆角矩形近似 |
-| `演示` 徽章 | 只属于页内假数据 Demo；原生卡片显示真实译文，**不出现**该徽章 |
-
-> **改视觉先改 `client.js`，再同步到 `card.mjs`**，不要只改一边。
-
-原生卡片四周给阴影留了 14 DIP 外扩，那圈半透明像素本来会吞掉点击；
-`onHitTest` 在卡片矩形之外返回 `HTTRANSPARENT`，把点击交给下面的应用。
-
-## 文件
-
-| 文件 | 作用 |
-|---|---|
-| `client.js` | 客户端半边（手写，无需构建）：卡片 + 选区侦测 + 假流式 + 设置页 |
-| `index.js` | 宿主半边：M1 只有一条自检路由；M2 在这里接 `ctx.llm.stream` 与伴生进程 |
-| `package.json` | bundle 声明（`dsh.bundle.patch` + `dsh.client.platform: web`） |
-| `cordis.patch.yml` | 插件自带的 insert 行（走 bundle 安装时用；M1 实际用的是 profile 那份） |
-| `LICENSE` | 本项目许可（MIT） |
-| `THIRD-PARTY-NOTICES.md` | **取词内核的上游声明与改动说明（必须随插件分发，不得删除）** |
-
-## 来源、许可与致谢
-
-**取词内核衍生自 [dsh-selection-tools](https://github.com/fyisgod/dsh-selection-tools)**
-（作者 [@fyisgod](https://github.com/fyisgod)，MIT，`Copyright (c) 2026 dsh-selection-tools contributors`），
-基于 commit `3f292d92`（v0.8.2）：
-
-| 本仓库文件 | 与上游的关系 |
-|---|---|
-| `companion/win32.mjs`、`companion/gesture.mjs`、`companion/native/uia.mjs`、`companion/native/uia-worker.mjs` | **逐字节相同**（只在文件顶部加了许可头） |
-| `companion/context.mjs` | 同源，少量改动（worker 统计增加 `lastError` 排障） |
-| `companion/native/gdi.mjs` | 同源，较多改动（中文逐字间距、行尾省略号、行首禁则） |
-| `companion/native/window.mjs` | 同源，较多改动（两趟绘制、阴影穿透、光标形状） |
-
-其余文件（`index.js`、`settings.mjs`、`client.js`、`companion/main.mjs`、`card.mjs`、`hitzone.mjs`、
-`input.mjs`、`placement.mjs`、`translate.mjs`、`test/**`）为本项目独立实现 —— 与上游最长连续逐字相同片段
-只有 3–5 行（`client.js` 为 0 行）。
-
-> MIT 要求版权与许可声明**随本软件的所有副本一起提供**，所以上游的 MIT 原文与逐文件改动说明
-> 完整放在 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)；本项目自身同样以 MIT 发布，见 [`LICENSE`](LICENSE)。
-> 感谢 @fyisgod 把 Windows 取词内核开源出来 —— 这个插件能跑起来靠的就是它。
+**感谢 @fyisgod 把这套 Windows 取词内核开源出来，这个插件能跑起来靠的就是它。**

@@ -1,7 +1,7 @@
 /**
  * `companion/hitzone.mjs` —— 窗口命中区。
  *
- * 两条都是实测踩出来的（交接文档 §6 第 7、9 条）：
+ * 两条都是实测踩出来的：
  *  - `HTCAPTION` 区域永远收不到 `WM_LBUTTONDOWN` → 按钮必须从标题栏区排除；
  *  - 卡片四周的阴影外扩是半透明像素，会吞点击 → 卡片之外必须返回 `transparent`。
  */
@@ -78,7 +78,7 @@ test('边界：卡片左上角算卡片内（caption），右下角是拖宽热�
   assert.equal(hitZone(card.x + card.w, card.y + card.h, data()), 'resize-right')
 })
 
-test('左右内缘可拖宽：只在正文/页脚区、流式生成中禁用（交接文档 §6 第 24 条）', () => {
+test('左右内缘可拖宽：只在正文/页脚区、流式生成中禁用', () => {
   const layout = cardLayout(CARD.bodyLine, { langW: 115 })
   const box = layout.card
   const bodyY = layout.bodyTop + 10
