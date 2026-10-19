@@ -49,14 +49,14 @@ cd dsh-select-translate
 pnpm test            # 等价于 node --test "test/**/*.test.mjs"
 ```
 
-零依赖：只用内置 `node:test`，不需要 DSH、不需要 koffi、不需要真实 Windows 桌面。当前 **153 个**。
+零依赖：只用内置 `node:test`，不需要 DSH、不需要 koffi、不需要真实 Windows 桌面。当前 **156 个**。
 
 | 测试文件 | 钉住的东西 |
 |---|---|
 | `gesture.test.mjs` | 拖选 5px / 双击 420ms·6px 阈值、最大位移、`onPress` 时机、取词 latest-wins |
 | `text-layout.test.mjs` | 换行：每行容量、行首禁则、CJK 合并成整行绘制、省略号余量、`dryRun` 与真画高度一致 |
 | `text-normalize.test.mjs` | 取词文本整理：`\r\n`/`\r` → `\n`、PDF 压成一行时按 `(a)`/`1.`/`①` 插回换行、不误拆小数与正文括号 |
-| `card-layout.test.mjs` | 卡片几何、命中区、语言菜单、可拖宽（`cardW` 夹取）、绘制回写值 |
+| `card-layout.test.mjs` | 卡片几何、命中区、语言菜单、可拖宽（`cardW` 夹取）、绘制回写值、头部悬浮提示（文案/位置/夹取） |
 | `hitzone.test.mjs` | `HTCAPTION` 区收不到点击（按钮必须排除）、阴影外扩必须穿透、左右内缘拖宽 |
 | `placement.test.mjs` | 越界翻转、夹进工作区、第二块屏负坐标、125% 缩放取整 |
 | `trigger-icon.test.mjs` | 小图标几何、方窗口四角穿透、绘制与 hover 配色 |
@@ -159,6 +159,9 @@ curl.exe -i http://127.0.0.1:19387/api/dsh-select-translate/ping
 10. 卡片是 `WS_EX_NOACTIVATE`，**收不到键盘消息**：`Esc` 靠 40ms 轮询边沿检测；"输入自定义语种"必须另开一个可激活窗口。
 11. 真流式的节奏由模型决定，**可能一口气返回**——要稳定验证流式中间态，用 `POST /simulate {fake:true, …}` 的假流式。
 12. 长文本测试的输入必须**多样**：同一句话重复会让模型复读、撞输出上限，导致"没被截断"的检查假失败。
+13. 自定义语种输入小窗是**另一个顶层窗口**：`onPress` 的"点卡片外面就关"必须把它排除（`pointInInputWindow`），
+    否则用户一点输入框，卡片会连同输入框一起消失；在输入窗里发起的拖动也不算划词手势。
+14. 悬浮提示（⚡/📌）只在**绘制时**叠一层，不改变窗口尺寸、不参与命中；语言下拉展开时不画，免得和菜单打架。
 
 ## 来源与许可
 

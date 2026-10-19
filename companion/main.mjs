@@ -362,6 +362,21 @@ const win = createNativeWindow({
 const langInput = createInputWindow({ api })
 
 /**
+ * 输入小窗的矩形（物理像素）。
+ *
+ * 它是**独立的顶层窗口**，不在卡片窗口里；而"点卡片外面就关"是在 `onPress` 里判的，
+ * 所以必须把这个矩形排除 —— 否则用户一点输入框，就被当成"点了卡片外面"，
+ * 卡片连同输入框一起消失（0.1.4 修的就是这个）。
+ */
+let inputRect = null
+
+/** 屏幕物理坐标是否落在输入小窗里（窗口没开时恒为 false）。 */
+function pointInInputWindow(x, y) {
+  if (inputRect === null) return false
+  return x >= inputRect.x && x < inputRect.x + inputRect.w && y >= inputRect.y && y < inputRect.y + inputRect.h
+}
+
+/**
  * 改正文滚动位置（滚轮走这里）。
  * 夹取用**卡片实测的** contentHeight / bodyHeight：内容比卡片矮时上限就是 0，滚不动。
  * @returns 是否真的动了（动过才需要重绘）。
@@ -413,6 +428,7 @@ function hideCard() {
   if (langInput.isOpen()) {
     langInput.close()
     card.inputOpen = false
+    inputRect = null
   }
   // 关卡片 = 中断在途请求（Esc / ✕ / 点外部关闭都走这里）。
   // 不中断的话模型会继续跑完：用户看不到，但照常计费。
@@ -549,9 +565,11 @@ function openCustomLangInput() {
   const y = below + wantH <= card.work.bottom ? below : win.state.y - wantH - gap
   const opened = langInput.open({ x, y, width: wantW, height: wantH, initial: card.customTarget, scale: s })
   if (!opened) {
+    inputRect = null
     noteError('input', new Error('无法创建自定义语种输入窗'))
     return
   }
+  inputRect = { x, y, w: wantW, h: wantH }
   setCard({ inputOpen: true, inputOpenedAt: Date.now() })
 }
 
@@ -560,6 +578,7 @@ function closeCustomLangInput(commit) {
   if (langInput.isOpen() !== true) return
   const value = commit === true ? langInput.value().trim() : ''
   langInput.close()
+  inputRect = null
   setCard({ inputOpen: false })
   if (value === '') return
   const target = value.slice(0, 24)
@@ -616,6 +635,7 @@ async function startTranslate(text, target) {
   if (langInput.isOpen()) {
     langInput.close()
     card.inputOpen = false
+    inputRect = null
   }
   // 取词文本整理：
   // ① `\r\n`/`\r` → `\n`（UIA 的行分隔符不是 `\n`，而提示词与原生排版都只认 `\n`）；
@@ -689,6 +709,8 @@ async function startTranslate(text, target) {
 /* ────────────────────────── 手势 → 取词 → 卡片 ────────────────────────── */
 
 async function handleGesture(gesture) {
+  // 自定义语种输入小窗里发起的拖动（选词/移动光标）不是"划词"：既不该关卡片，也不该去取词。
+  if (pointInInputWindow(gesture.x, gesture.y) || pointInInputWindow(gesture.downX, gesture.downY)) return
   state.gestures += 1
   state.recentGestures.push({ kind: gesture.kind, x: gesture.x, y: gesture.y, at: Date.now() })
   if (state.recentGestures.length > 20) state.recentGestures.shift()
@@ -752,6 +774,8 @@ const detector = createGestureDetector({
       return
     }
     if (!card.visible || card.pinned) return
+    // 输入小窗是独立窗口：点它不算"点卡片外面"（否则卡片会和输入框一起被关掉）
+    if (card.inputOpen === true && pointInInputWindow(press.x, press.y)) return
     if (!pointInCard(press.x, press.y)) hideCard()
   },
 })
@@ -847,6 +871,11 @@ const server = createServer((req, res) => {
         langW: Math.round(card.langW),
         copyW: Math.round(card.copyW),
         retryW: Math.round(card.retryW),
+        // 自定义语种输入小窗是否开着 + 它的物理矩形（排障用：它不在卡片窗口里）
+        inputOpen: card.inputOpen,
+        inputRect,
+        // 当前鼠标悬停的命中区（排障 / 冒烟用；`null` = 没悬停在按钮上）
+        hover: card.hover,
       },
       window: {
         alive: win.isAlive(),

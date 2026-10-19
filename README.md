@@ -59,6 +59,7 @@ dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
 | `Esc` / 点卡片外 / ✕ | 关闭，并**中断在途请求** |
 | 头部 **⚡** | 即划即译 ↔ 小图标模式（选择会记住） |
 | 头部 **📌** | 钉住：点外面不关；再划词时原地换内容 |
+| 悬停 **⚡ / 📌** | 显示点击后的效果（关闭即划即译 / 置顶…） |
 | 头部 **翻译 ⌄** | 目标语言：自动 / 中文 / English / 自定义… |
 | 页脚 **复制 / 重译** | 复制译文 / 用同一段原文再译一次 |
 
@@ -126,7 +127,7 @@ dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
 想改代码、跑测试、看实现细节，见 **[docs/DEVELOPMENT.md](https://github.com/SHAN5246992ZHUI/dsh-select-translate/blob/main/docs/DEVELOPMENT.md)**。
 
 - 纯 JS，无构建步骤
-- 单测 **153 个**（零依赖，`pnpm test`）
+- 单测 **156 个**（零依赖，`pnpm test`）
 - 真进程冒烟检查覆盖取词、落位、真译文、长文本、小图标模式
 
 ## 📄 许可与致谢

@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { CARD, cardHitTest, cardLayout, clampScroll, LANG_IDS, LANG_LABELS, langRowAt, paintCard } from '../companion/card.mjs'
+import { CARD, cardHitTest, cardLayout, clampScroll, headerTooltip, LANG_IDS, LANG_LABELS, langRowAt, paintCard, tooltipRect } from '../companion/card.mjs'
 import { normalizeLineBreaks } from '../companion/text.mjs'
 import { createFakePainter } from './support/fake-painter.mjs'
 
@@ -506,4 +506,51 @@ test('paintCard 按窗口实际宽度排版：拖宽后正文跟着重排', () =
   // 窗口比下限还窄 → 按下限排版并回写真实宽度，免得和窗口尺寸来回抖
   const narrow = paintCard(createFakePainter(), 120, 300, cardData(), 1)
   assert.equal(narrow.cardW, CARD.minWidth)
+})
+
+test('头部悬浮提示：文案写"点击后的动作"，语言下拉展开时不显示', () => {
+  assert.deepEqual(headerTooltip({ hover: 'bolt', mode: 'auto' }), { id: 'bolt', text: '关闭即划即译' })
+  assert.deepEqual(headerTooltip({ hover: 'bolt', mode: 'icon' }), { id: 'bolt', text: '即划即译' })
+  assert.deepEqual(headerTooltip({ hover: 'pin', pinned: false }), { id: 'pin', text: '置顶' })
+  assert.deepEqual(headerTooltip({ hover: 'pin', pinned: true }), { id: 'pin', text: '取消置顶' })
+  // 其它 hover 区域不弹；语言下拉展开时也不弹（菜单是覆盖层，会打架）
+  assert.equal(headerTooltip({ hover: 'close', mode: 'auto' }), null)
+  assert.equal(headerTooltip({ hover: 'bolt', mode: 'auto', langOpen: true }), null)
+})
+
+test('悬浮提示框：贴在按钮正下方、水平居中、夹在卡片内', () => {
+  const layout = cardLayout(CARD.bodyLine)
+  const t = CARD.tooltip
+  for (const [id, hit] of [['bolt', layout.hitBolt], ['pin', layout.hitPin]]) {
+    const rect = tooltipRect(layout, id, 76) // 「关闭即划即译」的近似净宽
+    assert.equal(rect.y, hit.y + hit.h + t.gap)
+    assert.equal(rect.h, t.height)
+    assert.equal(rect.w, 76 + t.padX * 2)
+    // 必须完整落在卡片内（否则会画出卡片/窗口）
+    assert.ok(rect.x >= layout.card.x + CARD.edge)
+    assert.ok(rect.x + rect.w <= layout.card.x + layout.card.w - CARD.edge)
+    // 未触边时水平居中（允许 1 DIP 的取整误差）
+    const centerDelta = Math.abs(rect.x + rect.w / 2 - (hit.x + hit.w / 2))
+    const clamped = rect.x === layout.card.x + CARD.edge || rect.x + rect.w === layout.card.x + layout.card.w - CARD.edge
+    assert.ok(clamped || centerDelta <= 0.5)
+  }
+})
+
+test('绘制：悬停 ⚡/📌 会画出提示文字，其它区域/下拉展开时不画', () => {
+  const textsOf = (data) => {
+    const painter = createFakePainter()
+    const layout = cardLayout(CARD.bodyLine, { cardW: data.cardW })
+    paintCard(painter, layout.windowW, layout.windowH, cardData(data), 1)
+    return painter.calls.text.map((call) => call.text)
+  }
+  assert.ok(textsOf({ hover: 'bolt', mode: 'auto' }).includes('关闭即划即译'))
+  assert.ok(textsOf({ hover: 'bolt', mode: 'icon' }).includes('即划即译'))
+  assert.ok(textsOf({ hover: 'pin', pinned: false }).includes('置顶'))
+  assert.ok(textsOf({ hover: 'pin', pinned: true }).includes('取消置顶'))
+  // 悬停别处 / 下拉展开时没有提示
+  const elsewhere = textsOf({ hover: 'close' })
+  assert.equal(elsewhere.includes('置顶'), false)
+  assert.equal(elsewhere.includes('关闭即划即译'), false)
+  const menuOpen = textsOf({ hover: 'bolt', mode: 'auto', langOpen: true })
+  assert.equal(menuOpen.includes('关闭即划即译'), false)
 })

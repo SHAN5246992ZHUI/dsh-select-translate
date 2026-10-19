@@ -63,6 +63,12 @@ export const CARD = {
    * `holdMs` = 停手后再显示多久；`fadeMs` = 淡入/淡出时长（40ms 一轮询 → 约 3 步）。
    */
   scrollbar: { width: 6, inset: 1, padY: 3, minHeight: 24, radius: 3, color: 0xff_c9_ce_db, holdMs: 700, fadeMs: 120 },
+  /**
+   * 头部 ⚡ / 📌 的悬浮提示（写在按钮正下方）。
+   * 文案写"点击后的动作"，不是当前状态；语言下拉展开时不显示。
+   * 尺寸全是 DIP：12px 字 / 高 24 / 左右内边距 8 / 与按钮间距 6 / 圆角 6。
+   */
+  tooltip: { font: 12, height: 24, padX: 8, gap: 6, radius: 6 },
 }
 
 const COLOR = {
@@ -318,6 +324,32 @@ export function cardHitTest(x, y, layout) {
   return null
 }
 
+/**
+ * 头部 ⚡ / 📌 的悬浮提示文案：写**点击后的动作**，不是当前状态。
+ * 语言下拉展开时不显示（菜单是覆盖层，提示框会打架）。
+ * @returns `{ id, text } | null`
+ */
+export function headerTooltip(data) {
+  if (data.langOpen === true) return null
+  if (data.hover === 'bolt') return { id: 'bolt', text: data.mode === 'icon' ? '即划即译' : '关闭即划即译' }
+  if (data.hover === 'pin') return { id: 'pin', text: data.pinned === true ? '取消置顶' : '置顶' }
+  return null
+}
+
+/**
+ * 提示框矩形（DIP，窗口坐标系）：贴在按钮正下方、水平居中，夹在卡片内。
+ * @param textW - 文案的净宽度（DIP，由 `labelWidth` 实测）。
+ */
+export function tooltipRect(layout, id, textW) {
+  const t = CARD.tooltip
+  const w = Math.round(textW + t.padX * 2)
+  const anchor = id === 'pin' ? layout.hitPin : layout.hitBolt
+  const minX = layout.card.x + CARD.edge
+  const maxX = layout.card.x + layout.card.w - CARD.edge - w
+  const x = Math.max(minX, Math.min(maxX, Math.round(anchor.x + anchor.w / 2 - w / 2)))
+  return { x, y: anchor.y + anchor.h + t.gap, w, h: t.height, radius: t.radius }
+}
+
 /* ────────────────────────── 图标（16 单位画布，与 视觉基准 的 SVG 同源） ────────────────────────── */
 
 /**
@@ -385,14 +417,16 @@ function paintIcon(painter, id, boxX, boxY, size, color, s) {
 /**
  * 近似 M1 的 `box-shadow: 0 16px 40px rgba(16,27,50,.16)`。
  * GDI+ 没有模糊原语，所以叠 N 层逐层外扩、透明度递减的圆角矩形来凑柔光。
+ * `options` 用来给更小的浮层（悬浮提示）配一套更轻的阴影。
  */
-function paintShadow(painter, rect, radius, s) {
-  const spread = CARD.shadow * s
-  const offset = CARD.shadowOffsetY * s
-  const steps = 10
+function paintShadow(painter, rect, radius, s, options = {}) {
+  const spread = (options.spread ?? CARD.shadow) * s
+  const offset = (options.offsetY ?? CARD.shadowOffsetY) * s
+  const baseAlpha = options.alpha ?? 16
+  const steps = options.steps ?? 10
   for (let i = steps; i >= 1; i--) {
     const grow = (spread * i) / steps
-    const alpha = Math.round(16 * Math.pow(1 - i / (steps + 1), 1.6))
+    const alpha = Math.round(baseAlpha * Math.pow(1 - i / (steps + 1), 1.6))
     if (alpha <= 0) continue
     painter.fillRoundRect(
       rect.x - grow,
@@ -614,6 +648,23 @@ export function paintCard(painter, width, height, data, s) {
       })
       if (on) paintIcon(painter, 'check', rect.x + rect.w - 8 * s - 14 * s, rect.y + (rect.h - 14 * s) / 2, 14 * s, COLOR.accent, s)
     }
+  }
+
+  // ── 头部按钮的悬浮提示（覆盖层，画在最后；不影响窗口尺寸与命中）──
+  const tip = headerTooltip(data)
+  if (tip !== null) {
+    const t = CARD.tooltip
+    const textW = labelWidth(painter, tip.text, t.font * s, s)
+    const rect = tooltipRect(layout, tip.id, textW)
+    const box = painter.measure(tip.text, { size: t.font * s })
+    const px = { x: rect.x * s, y: rect.y * s, w: rect.w * s, h: rect.h * s }
+    paintShadow(painter, px, rect.radius * s, s, { spread: 3, offsetY: 1, alpha: 20, steps: 4 })
+    painter.fillRoundRect(px.x, px.y, px.w, px.h, rect.radius * s, COLOR.bg)
+    painter.strokeRoundRect(px.x, px.y, px.w, px.h, rect.radius * s, COLOR.border, Math.max(1, Math.round(s)))
+    painter.text(tip.text, px.x + t.padX * s, px.y + (px.h - box.height) / 2, box.width + 2, box.height + 2, {
+      size: t.font * s,
+      color: COLOR.text,
+    })
   }
 
   return { bodyHeight, contentHeight, scroll, langW, copyW, retryW, cardW }
