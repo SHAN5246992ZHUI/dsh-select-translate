@@ -4,7 +4,7 @@
 
 ---
 
-## 架构：三个半边
+## 架构：两个半边
 
 ```
 DSH 宿主进程                                伴生进程（Node，复用 DSH 自带 koffi）
@@ -12,19 +12,19 @@ DSH 宿主进程                                伴生进程（Node，复用 DSH
 │  · /dsh-select-translate/api/* 路由（SSE）  ├ UIA 取词（worker 线程 + 超时隔离）
 │  · ctx.llm.stream 出译文                   ├ 原生分层窗口 + GDI+ 自绘卡片 / 小图标
 │  · 设置读写 / 伴生进程生命周期               └ 落位翻转、DPI 换算、滚动、拖宽
-└ 客户端半边（React 页面脚本）
-   · 页内保底卡片 + 「设置 → 划词翻译」
+└（没有客户端半边：不往 DSH 页面注入任何 UI）
 ```
 
 - **宿主半边**（`index.js` / `settings.mjs`）：挂路由、调 `ctx.llm.stream`、管设置与伴生进程。
 - **伴生进程**（`companion/**`）：系统级取词 + 原生卡片。由宿主 spawn，崩溃会退避重启。
-- **客户端半边**（`client.js`）：页内卡片与设置页，手写页面脚本、无需构建。
+
+> 0.1.3 起页内卡片（原 `client.js`）与「设置 → 划词翻译」页已下线：那两半只能用假数据，
+> 拿不到宿主路由令牌，接不了真译文；删掉后插件是纯原生的，没有可配置项。
 
 ## 目录
 
 | 文件 | 作用 |
 |---|---|
-| `client.js` | 页内卡片 + 选区侦测 + 假流式 + 设置页 |
 | `index.js` | 宿主半边：路由、`ctx.llm.stream`、伴生进程生命周期 |
 | `settings.mjs` | 设置默认值 / 校验 / 落盘 |
 | `cordis.patch.yml` | 插件自带的 insert 行（走 bundle 安装时用） |
@@ -39,7 +39,6 @@ DSH 宿主进程                                伴生进程（Node，复用 DSH
 
 | 改什么 | 怎么生效 |
 |---|---|
-| `client.js` | **热更**：`client-hmr` 每 500ms 轮询，自动重建并 remount，不用刷新页面 |
 | `index.js` / `settings.mjs` | **必须重启桌面端**（ESM 缓存；禁用再启用插件也换不掉） |
 | `companion/**` | 重启伴生进程即可：`POST /dsh-select-translate/api/system/restart` |
 
@@ -89,10 +88,10 @@ node test/support/smoke-companion.mjs --long     # 追加 4000 字真翻译 + �
 
 ## 视觉基准
 
-`client.js`（页内卡片）是**唯一定义**：尺寸 / 间距 / 字号 / 圆角 / 配色都以它的 CSS 为准，
-`companion/card.mjs` 的 `CARD` / `COLOR` 常量逐条对齐；图标直接由 `client.js` 里 SVG path 按 16 单位画布换算。
+视觉规格存档在 [`card-visual-baseline.md`](card-visual-baseline.md)：卡片 / 小图标的尺寸、间距、字号、圆角、配色，
+以及图标的 16 单位画布几何（原先由页内卡片定义；0.1.3 起那份页面脚本已下线）。
 
-> **改视觉先改 `client.js`，再同步到 `card.mjs`。**
+实现是 `companion/card.mjs` 的 `CARD` / `COLOR` / `TRIGGER` 常量；改视觉时与存档、`docs/*.png` 三张成品截图一起对。
 
 两个不能 1:1 的地方：
 
@@ -118,13 +117,6 @@ node test/support/smoke-companion.mjs --long     # 追加 4000 字真翻译 + �
 排障端点（伴生进程自己的端口，**不走 Web 载体**）：`GET /status`、`POST /simulate`、`POST /probe`、
 `POST /diagnose`、`POST /measure`、`POST /scroll`、`POST /hittest`、`POST /where` 等。
 端口与令牌在运行时文件 `$DSH_HOME/dsh-select-translate-runtime.json` 里。
-
-## 为什么页内卡片用 portal 挂到 `document.body`
-
-卡片最初渲染在 `shell.overlay` 里，被应用内其它窗口遮住过：`.overlayLayer` 自带 `z-index`，构成层叠上下文，内部 z-index 再高也压不过层外元素。
-
-现在用 `ReactDOM.createPortal` 挂到 `document.body` 下的直挂层（`z-index: 2147483000`、`pointer-events: none`）。
-仍然压不过浏览器 **top-layer**（原生 `<dialog>` / `<popover>`）。
 
 ## 开发时怎么装
 

@@ -3,8 +3,8 @@
  *
  * 为什么不用 DSH 官方的设置体系（结论来自 §5.5 的调研）：
  *  - 宿主可以 `export const Config` 声明可配置项，但**没有任何已发布客户端会按 schema 自动画页面**，
- *    设置页仍要插件自绘；而 `Config` 要用 schemastery/zod 构造 schema，插件目录里没有 node_modules，
- *    依赖解析不到 —— 所以这里走"自己写一份最小 JSON"；
+ *    要自己画设置页；而 `Config` 要用 schemastery/zod 构造 schema，插件目录里没有 node_modules，
+ *    依赖解析不到 —— 所以这里走"自己写一份最小 JSON"（0.1.3 起不再有设置页，这份设置只由卡片头部 ⚡ 读写）；
  *  - 这与已发布的同类插件一致（`dsh-selection-tools` 就是 fs 写 `DSH_HOME/dsh-selection-tools.json`）。
  *
  * 文件位置：`$DSH_HOME/dsh-select-translate.json`（拿不到 DSH_HOME 就只在内存里生效）。

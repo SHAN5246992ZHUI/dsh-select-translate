@@ -1,6 +1,6 @@
 {
   "name": "dsh-select-translate",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "划词翻译 · 选中文字即在鼠标旁弹出只含译文的卡片",
   "license": "MIT",
@@ -29,7 +29,6 @@
   "files": [
     "index.js",
     "settings.mjs",
-    "client.js",
     "companion",
     "cordis.patch.yml",
     "README.md",
@@ -38,14 +37,12 @@
   ],
   "exports": {
     ".": "./index.js",
-    "./client": "./client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "dsh": {
     "manifestVersion": 1,
-    "bundle": { "patch": "./cordis.patch.yml" },
-    "client": { "platform": "web" }
+    "bundle": { "patch": "./cordis.patch.yml" }
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.mjs\""

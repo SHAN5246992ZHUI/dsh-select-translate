@@ -46,6 +46,7 @@ dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
 ```
 
 > 装完**重启 DSH**（宿主半边不会热加载）。已发布到 npm：[`dsh-select-translate`](https://www.npmjs.com/package/dsh-select-translate)。
+> 装好即用，**没有需要配置的项**：触发方式（⚡）与目标语言（翻译 ⌄）都在卡片头部调整。
 > 卸载：市场里点卸载，或 `dsh plugin remove dsh-select-translate`。
 
 ## 🖱 怎么用
@@ -118,12 +119,6 @@ dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
 <summary><b>卡片为什么不抢焦点，还能不能打字？</b></summary>
 
 卡片是原生分层窗口且刻意不激活，所以不会打断你。需要输入时（自定义语种）会另开一个小输入框，支持中文输入法。
-</details>
-
-<details>
-<summary><b>页内卡片和系统级卡片有什么区别？</b></summary>
-
-系统级卡片是真正置顶在所有应用之上的原生窗口；页内卡片是 DSH 页面里的预览/兜底路径。两者交互对齐。
 </details>
 
 ## 🛠 开发

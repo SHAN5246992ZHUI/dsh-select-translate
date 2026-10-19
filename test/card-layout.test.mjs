@@ -1,9 +1,9 @@
 /**
  * `companion/card.mjs` —— 卡片布局与命中区。
  *
- * `client.js` 是冻结的视觉基准，`card.mjs` 必须与它逐条对齐。
+ * 视觉基准存档在 `docs/card-visual-baseline.md`（0.1.3 前由页内卡片定义），`card.mjs` 必须与它逐条对齐。
  * 这里钉三类事：
- *  1. **基准常量**：谁想改视觉，先改 `client.js`，这条测试会拦住"只改了一边"；
+ *  1. **基准常量**：谁想改视觉，先改 `docs/card-visual-baseline.md`，这条测试会拦住"只改了一边"；
  *  2. **几何关系**：命中区贴着内容、菜单是覆盖层（展开不改变窗口高度，所以卡片不跳）；
  *  3. **paintCard 的回写值**：按钮净宽是 DIP 且与显示器缩放无关（main.mjs 拿它当 DIP 用）。
  */
@@ -30,7 +30,7 @@ function cardData(patch = {}) {
   }
 }
 
-test('视觉基准常量与 client.js 对齐（改视觉必须先改 client.js）', () => {
+test('视觉基准常量与存档对齐（改视觉必须先改存档）', () => {
   assert.deepEqual(
     { width: CARD.width, radius: CARD.radius, headerH: CARD.headerH, footerH: CARD.footerH },
     { width: 380, radius: 12, headerH: 44, footerH: 40 },
@@ -181,7 +181,7 @@ test('命中测试：六个按钮各自命中，按钮之间的空档与卡片�
   assert.equal(cardHitTest(layout.text.x + 10, layout.text.y + 10, layout), null)
 })
 
-test('LANG_IDS / LANG_LABELS：前三个与 client.js 的 LANGS 一致，第 4 个是原生卡片独有的"自定义…"', () => {
+test('LANG_IDS / LANG_LABELS：前三个与视觉基准存档的 LANGS 一致，第 4 个是原生卡片独有的"自定义…"', () => {
   assert.deepEqual(LANG_IDS.slice(0, 3), ['auto', 'zh', 'en'])
   assert.deepEqual(LANG_LABELS, { auto: '自动', zh: '中文', en: 'English', custom: '自定义…' })
 })
@@ -350,7 +350,7 @@ test('流式跟随：内容还装得下时不滚（scroll 恒为 0）', () => {
 
 const SCROLLBAR_COLOR = 0xff_c9_ce_db
 
-test('滚动条常量与 client.js 的 ::-webkit-scrollbar 对齐（6 宽 / 圆角 3 / #c9cedb）', () => {
+test('滚动条常量与视觉基准存档的 ::-webkit-scrollbar 对齐（6 宽 / 圆角 3 / #c9cedb）', () => {
   assert.deepEqual(CARD.scrollbar, {
     width: 6,
     inset: 1,

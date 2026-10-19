@@ -33,11 +33,11 @@
 
 其余文件为本项目独立实现：
 
-`index.js`、`settings.mjs`、`client.js`、`companion/main.mjs`、`companion/card.mjs`、
+`index.js`、`settings.mjs`、`client.js`（页内卡片，0.1.3 起下线）、`companion/main.mjs`、`companion/card.mjs`、
 `companion/hitzone.mjs`、`companion/input.mjs`、`companion/placement.mjs`、`companion/translate.mjs`、`test/**`。
 
 判定依据（逐行与块级比对）：这些文件与上游**最长连续逐字相同片段只有 3–5 行**
-（`client.js` 为 **0 行**），且都是 `}` / `})()` 这类格式巧合，不存在整段沿用。
+（原页内卡片脚本为 **0 行**，该文件已于 0.1.3 下线），且都是 `}` / `})()` 这类格式巧合，不存在整段沿用。
 
 ### 1.3 上游许可原文（MIT）
 

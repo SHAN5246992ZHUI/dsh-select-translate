@@ -347,7 +347,7 @@ const win = createNativeWindow({
         pickLang(row)
         return true
       }
-      // 点菜单外只收起菜单，这一下不触发别的按钮（与 client.js 一致）
+      // 点菜单外只收起菜单，这一下不触发别的按钮（与视觉基准一致）
       setCard({ langOpen: false })
       return true
     }

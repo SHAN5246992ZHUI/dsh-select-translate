@@ -1,7 +1,7 @@
 /**
  * 原生卡片的布局、绘制与命中（GDI+ 自绘）。
  *
- * ⚠️ 本文件的视觉基准是 **M1 终稿的页内卡片**（`client.js`，已冻结）。
+ * ⚠️ 本文件的视觉基准是 `docs/card-visual-baseline.md`（M1 终稿页内卡片的存档；页面脚本 0.1.3 起已下线）。
  * 所有几何常量、颜色、字号都与它逐条对齐；图标不是"另画一个"，而是把
  * M1 那些 SVG path 的坐标**按 16 单位画布 1:1 换算**过来，保证形状一致。
  *
@@ -38,15 +38,15 @@ export const CARD = {
   edge: 8,
   shadow: 14, // 四周留给阴影的外扩（窗口比卡片大这么多）
   shadowOffsetY: 4,
-  // 头部：与 client.js 的 .hc-title（padding 0 8px / gap 6px）对齐
+  // 头部：与 视觉基准 的 .hc-title（padding 0 8px / gap 6px）对齐
   headPadX: 8,
   headGap: 6,
   caretSize: 14,
-  // 页脚按钮：与 client.js 的 .hc-act（padding 0 10px / gap 6px）+ .hc-foot（gap 4px）对齐
+  // 页脚按钮：与 视觉基准 的 .hc-act（padding 0 10px / gap 6px）+ .hc-foot（gap 4px）对齐
   actionPadX: 10,
   actionGap: 6,
   actionFootGap: 4,
-  // 语言下拉：与 client.js 的 .hc-langs 对齐（top 40 / left 10 / 宽 128 / 行高 30 / 内边距 4）
+  // 语言下拉：与 视觉基准 的 .hc-langs 对齐（top 40 / left 10 / 宽 128 / 行高 30 / 内边距 4）
   langTop: 40,
   langLeft: 10,
   langWidth: 128,
@@ -58,8 +58,8 @@ export const CARD = {
   retryW: 65,
   /**
    * 正文右侧的细滚动条（**只在滚动 / 流式跟随期间出现**，带淡入淡出）。
-   * 与 `client.js` 的 `.hc-body::-webkit-scrollbar` 对齐：6 宽、圆角 3、`#c9cedb`。
-   * 页内那半边交给浏览器原生滚动条（已用 CSS 收细），这里自绘一条同尺寸的。
+   * 与 `docs/card-visual-baseline.md` 的 `.hc-body::-webkit-scrollbar` 对齐：6 宽、圆角 3、`#c9cedb`。
+   * 页面那半边已下线（存档里是浏览器原生滚动条 + CSS 收细），这里自绘一条同尺寸的。
    * `holdMs` = 停手后再显示多久；`fadeMs` = 淡入/淡出时长（40ms 一轮询 → 约 3 步）。
    */
   scrollbar: { width: 6, inset: 1, padY: 3, minHeight: 24, radius: 3, color: 0xff_c9_ce_db, holdMs: 700, fadeMs: 120 },
@@ -77,7 +77,7 @@ const COLOR = {
   shadow: 0xff_10_1b_32,
 }
 
-/** 语言下拉的顺序与显示名（与 client.js 的 LANGS 一致；`custom` 是"输入自定义语种"那一行）。 */
+/** 语言下拉的顺序与显示名（与 视觉基准 的 LANGS 一致；`custom` 是"输入自定义语种"那一行）。 */
 export const LANG_IDS = ['auto', 'zh', 'en', 'custom']
 export const LANG_LABELS = { auto: '自动', zh: '中文', en: 'English', custom: '自定义…' }
 
@@ -99,7 +99,7 @@ function targetText(data) {
 }
 
 /**
- * 划词小图标（第二个触发模式用）。逐条对齐 `client.js` 的 `.hc-mini`：
+ * 划词小图标（第二个触发模式用）。逐条对齐 `docs/card-visual-baseline.md` 的 `.hc-mini`：
  * 24×24 圆、1px 边框、白底、`#677183` 的 globe（14px）、hover 转强调色、
  * `0 6px 16px rgba(16,27,50,.18)` 阴影、锚点右下 12px。
  *
@@ -318,11 +318,11 @@ export function cardHitTest(x, y, layout) {
   return null
 }
 
-/* ────────────────────────── 图标（16 单位画布，与 client.js 的 SVG 同源） ────────────────────────── */
+/* ────────────────────────── 图标（16 单位画布，与 视觉基准 的 SVG 同源） ────────────────────────── */
 
 /**
- * 每个图标都用 16×16 的坐标系描述，与 `client.js` 里 SVG 的 path 数据一一对应。
- * 椭圆一律写 [left, top, width, height]。画的时候整体乘 `size / 16`，形状与页内版一致。
+ * 每个图标都用 16×16 的坐标系描述，与 `docs/card-visual-baseline.md` 里 SVG 的 path 数据一一对应。
+ * 椭圆一律写 [left, top, width, height]。画的时候整体乘 `size / 16`，形状与存档一致。
  */
 const ICONS = {
   globe: {
@@ -355,7 +355,7 @@ function paintIcon(painter, id, boxX, boxY, size, color, s) {
   const icon = ICONS[id]
   if (icon === undefined) return
   const k = size / 16
-  const w = Math.max(1, 1.5 * s) // 与 client.js 的 strokeWidth: 1.5 对齐，不取整
+  const w = Math.max(1, 1.5 * s) // 与 视觉基准 的 strokeWidth: 1.5 对齐，不取整
   const x = (u) => boxX + u * k
   const y = (v) => boxY + v * k
 

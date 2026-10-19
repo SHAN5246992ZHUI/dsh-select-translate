@@ -1,7 +1,7 @@
 /**
  * `card.mjs` 的划词小图标（第二个触发模式）。
  *
- * 视觉基准是 `client.js` 的 `.hc-mini`（24×24 圆、1px 边框、白底、globe 14px、hover 转强调色）。
+ * 视觉基准是 `docs/card-visual-baseline.md` 的 `.hc-mini`（24×24 圆、1px 边框、白底、globe 14px、hover 转强调色）。
  * 这里钉的是几何与命中：**圆内才是可点区，方窗口的四角必须穿透**（否则卡片窗口会吞掉
  * 下面应用的点击，就是 §6 第 9 条那个坑的小号版本）。
  */
@@ -13,7 +13,7 @@ import { createFakePainter } from './support/fake-painter.mjs'
 
 const COLOR = { bg: 0xff_ff_ff_ff, border: 0xff_e5_e9_f0, subtle: 0xff_67_71_83, accent: 0xff_4d_6b_fe }
 
-test('图标常量与 client.js 的 .hc-mini 对齐：24 圆 / 1px 边框 / 14 glyph / 偏移 12', () => {
+test('图标常量与视觉基准的 .hc-mini 对齐：24 圆 / 1px 边框 / 14 glyph / 偏移 12', () => {
   assert.equal(TRIGGER.size, 24)
   assert.equal(TRIGGER.border, 1)
   assert.equal(TRIGGER.glyph, 14)
