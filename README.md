@@ -70,7 +70,7 @@ dsh plugin --profile web add github:SHAN5246992ZHUI/dsh-select-translate
 | 模式 | 行为 |
 |---|---|
 | **即划即译**（默认） | 划词停手就直接出卡片和译文 |
-| **小图标** | 划词停手只亮一个 24px 小圆图标，**点它才翻译**；移开鼠标 / `Esc` / 点别处即收起 |
+| **小图标** | 划词停手只亮一个 24px 小圆图标，**点它才翻译**；鼠标移开**不会**消失，点别处 / `Esc` / 重新划词时才收起 |
 
 <img src="https://raw.githubusercontent.com/SHAN5246992ZHUI/dsh-select-translate/main/docs/icon-mode.png" width="520" alt="小图标模式">
 

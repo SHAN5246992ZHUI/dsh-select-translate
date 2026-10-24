@@ -348,7 +348,7 @@ await sleep(80)
 s = await json(`${C}/status`)
 check('切到 icon 模式', s.card.mode === 'icon', JSON.stringify(switched))
 
-// 鼠标此刻在别处（用户在看界面）：把图标亮在真实光标处 → 不该被"移开即收"收掉
+// 鼠标此刻在别处（用户在看界面）：把图标亮在真实光标处
 const cursor = (await json(`${C}/where`)).cursor
 await post(`${C}/icon`, { x: cursor.x, y: cursor.y, text: 'The scheduler multiplexes goroutines onto OS threads.' })
 await sleep(200)
@@ -363,14 +363,13 @@ check(
 )
 check('鼠标就在图标上 → 不会自动收起', s.card.iconVisible === true)
 
-// 把图标亮在离光标 400px 的地方 → 下一次轮询应当收起
+// 0.1.5 起：鼠标离得再远也不收起 —— 图标要保留到下一次点击 / Esc / 新选区
 const farX = cursor.x > 1300 ? cursor.x - 400 : cursor.x + 400
 await post(`${C}/icon`, { x: farX, y: cursor.y, text: 'x' })
-await sleep(250)
-check('鼠标离得远 → 自动收起（移开即消失）', (await json(`${C}/status`)).card.iconVisible === false)
+await sleep(400)
+check('鼠标离得远 → 图标仍然显示（不再"移开即消失"）', (await json(`${C}/status`)).card.iconVisible === true)
 
 // 点图标 = 取词已在手里 → 直接翻译并换成卡片形态
-// （故意不 sleep：不给"光标漂移 >80px 触发移开收起"留窗口）
 await post(`${C}/icon`, { x: cursor.x, y: cursor.y, text: 'The scheduler multiplexes goroutines onto OS threads.' })
 const clicked = await post(`${C}/icon/click`)
 s = await json(`${C}/status`)

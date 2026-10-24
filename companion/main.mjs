@@ -495,13 +495,6 @@ async function activateIcon() {
   await startTranslate(text, card.target)
 }
 
-/** 鼠标离锚点太远就收起图标（"鼠标移开即消失"）。 */
-function iconShouldDismiss(cursor) {
-  if (card.iconVisible !== true) return false
-  const distance = Math.hypot(cursor.x - card.iconAnchor.x, cursor.y - card.iconAnchor.y)
-  return distance > TRIGGER.dismissDistance * (card.iconScale || 1)
-}
-
 /** 屏幕物理坐标是否落在小图标的圆里。 */
 function pointInIcon(x, y) {
   const layout = triggerIconLayout()
@@ -809,8 +802,8 @@ const timer = setInterval(() => {
       if (card.iconVisible === true) hideIcon()
       else if (card.visible) hideCard()
     }
-    // 鼠标移开就收起小图标（"移开即消失"）
-    if (iconShouldDismiss(point)) hideIcon()
+    // 小图标**不**因为鼠标移开而收起：它会一直显示，直到下一次鼠标按下（点图标本体除外）、
+    // Esc、新手势/新选区、切回即划即译或打开卡片（0.1.5 起）。
     // 滚动条淡入淡出：滚动/跟随期间为 1，停手 holdMs 后回 0；40ms 一步、约 3 步走完（fadeMs）。
     // 只在透明度真的变了才重绘（一次滚动最多多花 3 帧）。
     const barWant = Date.now() < card.scrollBarUntil ? 1 : 0
